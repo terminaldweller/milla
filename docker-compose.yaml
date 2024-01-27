@@ -1,0 +1,28 @@
+version: "3.9"
+services:
+  milla:
+    image: milla
+    build:
+      context: .
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+    networks:
+      - millanet
+    restart: unless-stopped
+    volumes:
+      - ./config.toml:/opt/milla/config.toml
+    cap_drop:
+      - ALL
+    dns:
+      - 9.9.9.9
+    environment:
+      - SERVER_DEPLOYMENT_TYPE=deployment
+    entrypoint: ["/milla/milla"]
+networks:
+  millanet:
