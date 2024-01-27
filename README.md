@@ -20,6 +20,8 @@ requestTimeout = 10
 millaReconnectDelay = 60
 enableSasl = true
 model = "llama2-uncensored"
+chromaStyle = "rose-pine-moon"
+chromaFormatter = "terminal256"
 ```
 
 ### Deploy
