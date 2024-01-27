@@ -6,7 +6,7 @@ Milla is an IRC bot that sends things over to ollama when you ask her questions.
 
 config:
 
-```
+```toml
 ircServer = "myaswesomeircserver.com"
 ircPort = 6697
 ircNick = "milla"
