@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -11,28 +12,27 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alecthomas/chroma/v2/quick"
 	"github.com/lrstanley/girc"
 	"github.com/pelletier/go-toml/v2"
 )
 
-const (
-	reconnectTime = 30
-)
-
-type handlerWrapper struct {
-	irc    *girc.Client
-	config TomlConfig
-}
-
 type TomlConfig struct {
-	IrcServer      string
-	IrcPort        int
-	IrcNick        string
-	IrcSaslUser    string
-	IrcSaslPass    string
-	IrcChannel     string
-	OllamaEndpoint string
-	OllamaTemp     float64
+	IrcServer           string
+	IrcPort             int
+	IrcNick             string
+	IrcSaslUser         string
+	IrcSaslPass         string
+	IrcChannel          string
+	OllamaEndpoint      string
+	OllamaTemp          float64
+	OllamaSystem        string
+	RequestTimeout      int
+	MillaReconnectDelay int
+	EnableSasl          bool
+	Model               string
+	ChromaStyle         string
+	ChromaFormatter     string
 }
 
 type OllamaResponse struct {
@@ -66,7 +66,7 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 	saslUser := appConfig.IrcSaslUser
 	saslPass := appConfig.IrcSaslPass
 
-	if saslUser != "" && saslPass != "" {
+	if appConfig.EnableSasl && saslUser != "" && saslPass != "" {
 		irc.Config.SASL = &girc.SASLPlain{
 			User: appConfig.IrcSaslUser,
 			Pass: appConfig.IrcSaslPass,
@@ -83,7 +83,8 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 			log.Println(prompt)
 
 			ollamaRequest := OllamaRequest{
-				Model:  "llama2-uncensored",
+				Model:  appConfig.Model,
+				System: appConfig.OllamaSystem,
 				Prompt: prompt,
 				Stream: false,
 				Format: "json",
@@ -99,7 +100,11 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 				return
 			}
 
-			request, err := http.NewRequest("POST", appConfig.OllamaEndpoint, bytes.NewBuffer(jsonPayload))
+			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
+			defer cancel()
+
+			request, err := http.NewRequest(http.MethodPost, appConfig.OllamaEndpoint, bytes.NewBuffer(jsonPayload))
+			request = request.WithContext(ctx)
 			if err != nil {
 				client.Cmd.ReplyTo(event, girc.Fmt(fmt.Sprintf("error: %s", err.Error())))
 
@@ -126,7 +131,17 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 				return
 			}
 
-			client.Cmd.ReplyTo(event, girc.Fmt(ollamaResponse.Response))
+			var writer bytes.Buffer
+			err = quick.Highlight(&writer, ollamaResponse.Response, "markdown", appConfig.ChromaFormatter, appConfig.ChromaStyle)
+			if err != nil {
+				client.Cmd.ReplyTo(event, girc.Fmt(fmt.Sprintf("error: %s", err.Error())))
+
+				return
+			}
+
+			fmt.Println(writer.String())
+			client.Cmd.ReplyTo(event, girc.Fmt(writer.String()))
+			// client.Cmd.ReplyTo(event, girc.Fmt(ollamaResponse.Response))
 		}
 	})
 
@@ -136,7 +151,7 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 		if err := irc.Connect(); err != nil {
 			log.Println(err)
 			log.Println("reconnecting in 30 seconds")
-			time.Sleep(reconnectTime * time.Second)
+			time.Sleep(time.Duration(appConfig.MillaReconnectDelay) * time.Second)
 		} else {
 			return
 		}
