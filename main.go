@@ -140,7 +140,7 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 			}
 
 			fmt.Println(writer.String())
-			client.Cmd.ReplyTo(event, girc.Fmt(writer.String()))
+			client.Cmd.ReplyTo(event, girc.Fmt("\033[0m"+writer.String()))
 			// client.Cmd.ReplyTo(event, girc.Fmt(ollamaResponse.Response))
 		}
 	})

@@ -1,6 +1,7 @@
 # milla
 
-Milla is an IRC bot that sends things over to ollama when you ask her questions.
+Milla is an IRC bot that sends things over to ollama when you ask her questions, prints the answer with synta-hilighting.<br/>
+![milla](./milla.png)
 
 ### Config
 
