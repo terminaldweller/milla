@@ -74,7 +74,10 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 	}
 
 	irc.Handlers.AddBg(girc.CONNECTED, func(c *girc.Client, e girc.Event) {
-		c.Cmd.Join(appConfig.IrcChannel)
+		channels := strings.Split(appConfig.IrcChannel, " ")
+		for _, channel := range channels {
+			c.Cmd.Join(channel)
+		}
 	})
 
 	irc.Handlers.AddBg(girc.PRIVMSG, func(client *girc.Client, event girc.Event) {
@@ -141,7 +144,6 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 
 			fmt.Println(writer.String())
 			client.Cmd.ReplyTo(event, girc.Fmt("\033[0m"+writer.String()))
-			// client.Cmd.ReplyTo(event, girc.Fmt(ollamaResponse.Response))
 		}
 	})
 
