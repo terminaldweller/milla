@@ -7,6 +7,7 @@ require (
 	github.com/google/generative-ai-go v0.7.0
 	github.com/lrstanley/girc v0.0.0-20240125042120-9add3166e52e
 	github.com/pelletier/go-toml/v2 v2.1.1
+	github.com/sashabaranov/go-openai v1.19.3
 	google.golang.org/api v0.163.0
 )
 

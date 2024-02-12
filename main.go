@@ -17,6 +17,7 @@ import (
 	"github.com/google/generative-ai-go/genai"
 	"github.com/lrstanley/girc"
 	"github.com/pelletier/go-toml/v2"
+	openai "github.com/sashabaranov/go-openai"
 	"google.golang.org/api/option"
 )
 
@@ -221,7 +222,52 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 					return
 				}
 
-				fmt.Println(writer.String())
+				log.Println(writer.String())
+				client.Cmd.ReplyTo(event, girc.Fmt("\033[0m"+writer.String()))
+			}
+		})
+	} else if appConfig.Provider == "chatgpt" {
+		irc.Handlers.AddBg(girc.PRIVMSG, func(client *girc.Client, event girc.Event) {
+			if strings.HasPrefix(event.Last(), appConfig.IrcNick+": ") {
+				prompt := strings.TrimPrefix(event.Last(), appConfig.IrcNick+": ")
+				log.Println(prompt)
+
+				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
+				defer cancel()
+
+				gptClient := openai.NewClient(appConfig.Apikey)
+
+				messages := make([]openai.ChatCompletionMessage, 0)
+
+				messages = append(messages, openai.ChatCompletionMessage{
+					Role:    "system",
+					Content: prompt,
+				})
+
+				resp, err := gptClient.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
+					Model:    appConfig.Model,
+					Messages: messages,
+				})
+				if err != nil {
+					client.Cmd.ReplyTo(event, girc.Fmt(fmt.Sprintf("error: %s", err.Error())))
+
+					return
+				}
+
+				var writer bytes.Buffer
+				err = quick.Highlight(
+					&writer,
+					resp.Choices[0].Message.Content,
+					"markdown",
+					appConfig.ChromaFormatter,
+					appConfig.ChromaStyle)
+				if err != nil {
+					client.Cmd.ReplyTo(event, girc.Fmt(fmt.Sprintf("error: %s", err.Error())))
+
+					return
+				}
+
+				log.Println(writer.String())
 				client.Cmd.ReplyTo(event, girc.Fmt("\033[0m"+writer.String()))
 			}
 		})
