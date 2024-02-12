@@ -28,7 +28,7 @@ type TomlConfig struct {
 	IrcSaslPass         string
 	IrcChannel          string
 	OllamaEndpoint      string
-	OllamaTemp          float64
+	Temp                float64
 	OllamaSystem        string
 	RequestTimeout      int
 	MillaReconnectDelay int
@@ -38,6 +38,8 @@ type TomlConfig struct {
 	ChromaFormatter     string
 	Provider            string
 	Apikey              string
+	TopP                float32
+	TopK                int32
 }
 
 type OllamaResponse struct {
@@ -64,6 +66,7 @@ func printResponse(resp *genai.GenerateContentResponse) string {
 		if cand.Content != nil {
 			for _, part := range cand.Content.Parts {
 				result += fmt.Sprintln(part)
+				log.Println(part)
 			}
 		}
 	}
@@ -112,7 +115,7 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 					Stream: false,
 					Format: "json",
 					Options: OllamaRequestOptions{
-						Temperature: appConfig.OllamaTemp,
+						Temperature: appConfig.Temp,
 					},
 				}
 
@@ -183,6 +186,7 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 				}
 				httpClient := http.Client{
 					Transport: &transport,
+					Timeout:   time.Duration(appConfig.RequestTimeout) * time.Second,
 				}
 
 				clientGemini, err := genai.NewClient(ctx, option.WithAPIKey(appConfig.Apikey), option.WithHTTPClient(&httpClient))
@@ -194,6 +198,9 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 				defer clientGemini.Close()
 
 				model := clientGemini.GenerativeModel(appConfig.Model)
+				model.SetTemperature(float32(appConfig.Temp))
+				model.SetTopK(appConfig.TopK)
+				model.SetTopP(appConfig.TopP)
 				resp, err := model.GenerateContent(ctx, genai.Text(prompt))
 				if err != nil {
 					client.Cmd.ReplyTo(event, girc.Fmt(fmt.Sprintf("error: %s", err.Error())))
