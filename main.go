@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -54,6 +55,20 @@ type OllamaRequest struct {
 	Stream  bool                 `json:"stream"`
 	Format  string               `json:"format"`
 	Options OllamaRequestOptions `json:"options"`
+}
+
+func printResponse(resp *genai.GenerateContentResponse) string {
+	result := ""
+
+	for _, cand := range resp.Candidates {
+		if cand.Content != nil {
+			for _, part := range cand.Content.Parts {
+				result += fmt.Sprintln(part)
+			}
+		}
+	}
+
+	return result
 }
 
 func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
@@ -140,14 +155,17 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 				}
 
 				var writer bytes.Buffer
-				err = quick.Highlight(&writer, ollamaResponse.Response, "markdown", appConfig.ChromaFormatter, appConfig.ChromaStyle)
+				err = quick.Highlight(&writer,
+					ollamaResponse.Response,
+					"markdown",
+					appConfig.ChromaFormatter,
+					appConfig.ChromaStyle)
 				if err != nil {
 					client.Cmd.ReplyTo(event, girc.Fmt(fmt.Sprintf("error: %s", err.Error())))
 
 					return
 				}
 
-				fmt.Println(writer.String())
 				client.Cmd.ReplyTo(event, girc.Fmt("\033[0m"+writer.String()))
 			}
 		})
@@ -160,15 +178,22 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
 				defer cancel()
 
-				client_gemini, err := genai.NewClient(ctx, option.WithAPIKey(appConfig.Apikey))
+				transport := http.Transport{
+					Proxy: http.ProxyFromEnvironment,
+				}
+				httpClient := http.Client{
+					Transport: &transport,
+				}
+
+				clientGemini, err := genai.NewClient(ctx, option.WithAPIKey(appConfig.Apikey), option.WithHTTPClient(&httpClient))
 				if err != nil {
 					client.Cmd.ReplyTo(event, girc.Fmt(fmt.Sprintf("error: %s", err.Error())))
 
 					return
 				}
-				defer client_gemini.Close()
+				defer clientGemini.Close()
 
-				model := client_gemini.GenerativeModel(appConfig.Model)
+				model := clientGemini.GenerativeModel(appConfig.Model)
 				resp, err := model.GenerateContent(ctx, genai.Text(prompt))
 				if err != nil {
 					client.Cmd.ReplyTo(event, girc.Fmt(fmt.Sprintf("error: %s", err.Error())))
@@ -176,18 +201,21 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 					return
 				}
 
-				fmt.Println(resp)
+				var writer bytes.Buffer
+				err = quick.Highlight(
+					&writer,
+					printResponse(resp),
+					"markdown",
+					appConfig.ChromaFormatter,
+					appConfig.ChromaStyle)
+				if err != nil {
+					client.Cmd.ReplyTo(event, girc.Fmt(fmt.Sprintf("error: %s", err.Error())))
 
-				// var writer bytes.Buffer
-				// err = quick.Highlight(&writer, resp, "markdown", appConfig.ChromaFormatter, appConfig.ChromaStyle)
-				// if err != nil {
-				// 	client.Cmd.ReplyTo(event, girc.Fmt(fmt.Sprintf("error: %s", err.Error())))
+					return
+				}
 
-				// 	return
-				// }
-
-				// fmt.Println(writer.String())
-				// client.Cmd.ReplyTo(event, girc.Fmt("\033[0m"+writer.String()))
+				fmt.Println(writer.String())
+				client.Cmd.ReplyTo(event, girc.Fmt("\033[0m"+writer.String()))
 			}
 		})
 	}
@@ -208,7 +236,11 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 func main() {
 	var appConfig TomlConfig
 
-	data, err := os.ReadFile("/opt/milla/config.toml")
+	configPath := flag.String("config", "./config-gemini.toml", "path to the config file")
+
+	flag.Parse()
+
+	data, err := os.ReadFile(*configPath)
 	if err != nil {
 		log.Fatal(err)
 	}

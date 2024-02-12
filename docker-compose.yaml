@@ -15,6 +15,7 @@ services:
     networks:
       - millanet
     restart: unless-stopped
+    command: ["--config", "/opt/milla/config.toml"]
     volumes:
       - ./config.toml:/opt/milla/config.toml
     cap_drop:
