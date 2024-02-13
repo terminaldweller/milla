@@ -1,6 +1,12 @@
 # milla
 
-Milla is an IRC bot that sends things over to ollama when you ask her questions, prints the answer with synta-hilighting.<br/>
+Milla is an IRC bot that sends things over to an AI model when you ask it questions, prints the answer with syntax-hilighting.<br/>
+Currently Supported Models:
+
+- Ollama
+- Openai
+- Gemini
+
 ![milla](./milla.png)
 
 ### Config
@@ -8,14 +14,14 @@ Milla is an IRC bot that sends things over to ollama when you ask her questions,
 config:
 
 ```toml
-ircServer = "myaswesomeircserver.com"
+ircServer = "irc.terminaldweller.com"
 ircPort = 6697
-ircNick = "milla"
-ircSaslUser = "milla"
-ircSaslPass = "myaswesomepassword"
-ircChannel = "#myaswesomechannel"
-ollamaEndpoint = "http://172.17.0.1:11434/api/generate"
-ollamaTemp = 0.2
+ircNick = "mybot"
+ircSaslUser = "mybot"
+ircSaslPass = "mypass"
+ircChannel = "#mychannel"
+ollamaEndpoint = ""
+temp = 0.2
 ollamaSystem = ""
 requestTimeout = 10
 millaReconnectDelay = 60
@@ -23,6 +29,10 @@ enableSasl = true
 model = "llama2-uncensored"
 chromaStyle = "rose-pine-moon"
 chromaFormatter = "terminal256"
+provider = "ollama" # ollama, chatgpt, gemini 
+apikey = "key"
+topP = 0.9
+topK = 20
 ```
 
 ### Deploy
@@ -47,6 +57,7 @@ services:
     networks:
       - millanet
     restart: unless-stopped
+    command: ["--config", "/opt/milla/config.toml"]
     volumes:
       - ./config.toml:/opt/milla/config.toml
     cap_drop:
