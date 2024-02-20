@@ -174,6 +174,7 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 			}
 		})
 	} else if appConfig.Provider == "gemini" {
+		log.Println("fuck prime")
 		irc.Handlers.AddBg(girc.PRIVMSG, func(client *girc.Client, event girc.Event) {
 			if strings.HasPrefix(event.Last(), appConfig.IrcNick+": ") {
 				prompt := strings.TrimPrefix(event.Last(), appConfig.IrcNick+": ")
@@ -182,15 +183,18 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
 				defer cancel()
 
-				transport := http.Transport{
-					Proxy: http.ProxyFromEnvironment,
-				}
-				httpClient := http.Client{
-					Transport: &transport,
-					Timeout:   time.Duration(appConfig.RequestTimeout) * time.Second,
-				}
+				// dialer := proxy.FromEnvironment()
 
-				clientGemini, err := genai.NewClient(ctx, option.WithAPIKey(appConfig.Apikey), option.WithHTTPClient(&httpClient))
+				// transport := http.Transport{
+				// 	Dial: dialer.Dial,
+				// }
+				// httpClient := http.Client{
+				// 	Transport: &transport,
+				// 	Timeout:   time.Duration(appConfig.RequestTimeout) * time.Second,
+				// }
+
+				// clientGemini, err := genai.NewClient(ctx, option.WithAPIKey(appConfig.Apikey), option.WithHTTPClient(&httpClient))
+				clientGemini, err := genai.NewClient(ctx, option.WithAPIKey(appConfig.Apikey))
 				if err != nil {
 					client.Cmd.ReplyTo(event, girc.Fmt(fmt.Sprintf("error: %s", err.Error())))
 
@@ -202,12 +206,14 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 				model.SetTemperature(float32(appConfig.Temp))
 				model.SetTopK(appConfig.TopK)
 				model.SetTopP(appConfig.TopP)
+				log.Println("fuck")
 				resp, err := model.GenerateContent(ctx, genai.Text(prompt))
 				if err != nil {
 					client.Cmd.ReplyTo(event, girc.Fmt(fmt.Sprintf("error: %s", err.Error())))
 
 					return
 				}
+				log.Println("fuck two")
 
 				var writer bytes.Buffer
 				err = quick.Highlight(
