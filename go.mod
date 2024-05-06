@@ -8,7 +8,6 @@ require (
 	github.com/lrstanley/girc v0.0.0-20240125042120-9add3166e52e
 	github.com/pelletier/go-toml/v2 v2.1.1
 	github.com/sashabaranov/go-openai v1.19.3
-	golang.org/x/net v0.20.0
 	google.golang.org/api v0.163.0
 )
 
@@ -33,6 +32,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.22.0 // indirect
 	go.opentelemetry.io/otel/trace v1.22.0 // indirect
 	golang.org/x/crypto v0.18.0 // indirect
+	golang.org/x/net v0.20.0 // indirect
 	golang.org/x/oauth2 v0.16.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/sys v0.16.0 // indirect
