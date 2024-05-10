@@ -224,24 +224,43 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 				}
 				defer response.Body.Close()
 
-				var ollamaResponse OllamaResponse
-				err = json.NewDecoder(response.Body).Decode(&ollamaResponse)
-				if err != nil {
-					client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
-
-					return
-				}
-
 				var writer bytes.Buffer
-				err = quick.Highlight(&writer,
-					ollamaResponse.Response,
-					"markdown",
-					appConfig.ChromaFormatter,
-					appConfig.ChromaStyle)
-				if err != nil {
-					client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
+				if appConfig.Chat {
+					var ollamaChatResponse OllamaChatMessages
+					err = json.NewDecoder(response.Body).Decode(&ollamaChatResponse)
+					if err != nil {
+						client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
+					}
 
-					return
+					err = quick.Highlight(&writer,
+						ollamaChatResponse.Messages[0].Content,
+						"markdown",
+						appConfig.ChromaFormatter,
+						appConfig.ChromaStyle)
+					if err != nil {
+						client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
+
+						return
+					}
+				} else {
+					var ollamaResponse OllamaResponse
+					err = json.NewDecoder(response.Body).Decode(&ollamaResponse)
+					if err != nil {
+						client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
+
+						return
+					}
+
+					err = quick.Highlight(&writer,
+						ollamaResponse.Response,
+						"markdown",
+						appConfig.ChromaFormatter,
+						appConfig.ChromaStyle)
+					if err != nil {
+						client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
+
+						return
+					}
 				}
 
 				log.Println(writer.String())
