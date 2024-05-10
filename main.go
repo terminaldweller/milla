@@ -80,14 +80,13 @@ type MemoryElement struct {
 	Content string `json:"content"`
 }
 
-func printResponse(resp *genai.GenerateContentResponse) string {
+func returnGeminiResponse(resp *genai.GenerateContentResponse) string {
 	result := ""
 
 	for _, cand := range resp.Candidates {
 		if cand.Content != nil {
 			for _, part := range cand.Content.Parts {
 				result += fmt.Sprintln(part)
-				log.Println(part)
 			}
 		}
 	}
@@ -241,6 +240,8 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
 				defer cancel()
 
+				// api and http client dont work together
+				// https://github.com/google/generative-ai-go/issues/80
 				// httpClient := http.Client{}
 				// allProxy := os.Getenv("ALL_PROXY")
 				// if allProxy != "" {
@@ -287,10 +288,27 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 				// 	return
 				// }
 
+				geminiResponse := returnGeminiResponse(resp)
+				log.Println(geminiResponse)
+
+				cs.History = append(cs.History, &genai.Content{
+					Parts: []genai.Part{
+						genai.Text(prompt),
+					},
+					Role: "user",
+				})
+
+				cs.History = append(cs.History, &genai.Content{
+					Parts: []genai.Part{
+						genai.Text(geminiResponse),
+					},
+					Role: "model",
+				})
+
 				var writer bytes.Buffer
 				err = quick.Highlight(
 					&writer,
-					printResponse(resp),
+					geminiResponse,
 					"markdown",
 					appConfig.ChromaFormatter,
 					appConfig.ChromaStyle)

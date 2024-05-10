@@ -24,25 +24,5 @@ services:
       - ALL
     environment:
       - SERVER_DEPLOYMENT_TYPE=deployment
-  # prettier:
-  #   build:
-  #     context: ./prettier
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         memory: 128M
-  #   logging:
-  #     driver: "json-file"
-  #     options:
-  #       max-size: "100m"
-  #   networks:
-  #     - millanet
-  #   restart: unless-stopped
-  #   cap_drop:
-  #     - ALL
-  #   cap_add:
-  #     - NET_BIND_SERVICE
-  #   ports:
-  #     - "127.0.0.1:9001:9001"
 networks:
   millanet:
