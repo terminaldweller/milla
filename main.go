@@ -44,7 +44,7 @@ type TomlConfig struct {
 	MillaReconnectDelay int
 	IrcPort             int
 	KeepAlive           int
-	MemoryLImit         int
+	MemoryLimit         int
 	TopP                float32
 	TopK                int32
 	Color               bool
@@ -95,7 +95,10 @@ func returnGeminiResponse(resp *genai.GenerateContentResponse) string {
 }
 
 func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
-	var Memory []MemoryElement
+	var OllamaMemory []MemoryElement
+
+	var GeminiMemory []*genai.Content
+
 	var GPTMemory []openai.ChatCompletionMessage
 
 	irc := girc.New(girc.Config{
@@ -142,16 +145,16 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 					Content: prompt,
 				}
 
-				if len(Memory) > appConfig.MemoryLImit {
-					Memory = Memory[:0]
+				if len(OllamaMemory) > appConfig.MemoryLimit {
+					OllamaMemory = OllamaMemory[:0]
 				}
-				Memory = append(Memory, memoryElement)
+				OllamaMemory = append(OllamaMemory, memoryElement)
 
 				ollamaRequest := OllamaChatRequest{
 					Model:      appConfig.Model,
 					Keep_alive: time.Duration(appConfig.KeepAlive),
 					Stream:     false,
-					Messages:   Memory,
+					Messages:   OllamaMemory,
 					Options: OllamaRequestOptions{
 						Temperature: appConfig.Temp,
 					},
@@ -214,7 +217,7 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 					Content: ollamaChatResponse.Messages.Content,
 				}
 
-				Memory = append(Memory, assistantElement)
+				OllamaMemory = append(OllamaMemory, assistantElement)
 
 				log.Println(ollamaChatResponse)
 				err = quick.Highlight(&writer,
@@ -243,6 +246,7 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 
 				// api and http client dont work together
 				// https://github.com/google/generative-ai-go/issues/80
+
 				// httpClient := http.Client{}
 				// allProxy := os.Getenv("ALL_PROXY")
 				// if allProxy != "" {
@@ -260,6 +264,7 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 				// }
 
 				// clientGemini, err := genai.NewClient(ctx, option.WithAPIKey(appConfig.Apikey), option.WithHTTPClient(&httpClient))
+
 				clientGemini, err := genai.NewClient(ctx, option.WithAPIKey(appConfig.Apikey))
 				if err != nil {
 					client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
@@ -275,6 +280,8 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 
 				cs := model.StartChat()
 
+				cs.History = GeminiMemory
+
 				resp, err := cs.SendMessage(ctx, genai.Text(prompt))
 				if err != nil {
 					client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
@@ -289,21 +296,25 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 				// 	return
 				// }
 
-				if len(cs.History) > appConfig.MemoryLImit {
+				if len(cs.History) > appConfig.MemoryLimit {
 					cs.History = cs.History[:0]
 				}
 
 				geminiResponse := returnGeminiResponse(resp)
 				log.Println(geminiResponse)
 
-				cs.History = append(cs.History, &genai.Content{
+				if len(GeminiMemory) > appConfig.MemoryLimit {
+					GeminiMemory = GeminiMemory[:0]
+				}
+
+				GeminiMemory = append(GeminiMemory, &genai.Content{
 					Parts: []genai.Part{
 						genai.Text(prompt),
 					},
 					Role: "user",
 				})
 
-				cs.History = append(cs.History, &genai.Content{
+				GeminiMemory = append(GeminiMemory, &genai.Content{
 					Parts: []genai.Part{
 						genai.Text(geminiResponse),
 					},
@@ -376,7 +387,7 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 					Content: resp.Choices[0].Message.Content,
 				})
 
-				if len(GPTMemory) > appConfig.MemoryLImit {
+				if len(GPTMemory) > appConfig.MemoryLimit {
 					GPTMemory = GPTMemory[:0]
 				}
 
