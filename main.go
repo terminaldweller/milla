@@ -96,6 +96,7 @@ func returnGeminiResponse(resp *genai.GenerateContentResponse) string {
 
 func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 	var Memory []MemoryElement
+	var GPTMemory []openai.ChatCompletionMessage
 
 	irc := girc.New(girc.Config{
 		Server: appConfig.IrcServer,
@@ -288,6 +289,10 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 				// 	return
 				// }
 
+				if len(cs.History) > appConfig.MemoryLImit {
+					cs.History = cs.History[:0]
+				}
+
 				geminiResponse := returnGeminiResponse(resp)
 				log.Println(geminiResponse)
 
@@ -351,21 +356,28 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 
 				gptClient := openai.NewClientWithConfig(config)
 
-				messages := make([]openai.ChatCompletionMessage, 0)
-
-				messages = append(messages, openai.ChatCompletionMessage{
-					Role:    "system",
+				GPTMemory = append(GPTMemory, openai.ChatCompletionMessage{
+					Role:    openai.ChatMessageRoleUser,
 					Content: prompt,
 				})
 
 				resp, err := gptClient.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
 					Model:    appConfig.Model,
-					Messages: messages,
+					Messages: GPTMemory,
 				})
 				if err != nil {
 					client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
 
 					return
+				}
+
+				GPTMemory = append(GPTMemory, openai.ChatCompletionMessage{
+					Role:    openai.ChatMessageRoleAssistant,
+					Content: resp.Choices[0].Message.Content,
+				})
+
+				if len(GPTMemory) > appConfig.MemoryLImit {
+					GPTMemory = GPTMemory[:0]
 				}
 
 				var writer bytes.Buffer
