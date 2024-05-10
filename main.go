@@ -66,6 +66,10 @@ type OllamaChatMessages struct {
 	Messages []OllamaChatMessage `json:"messages"`
 }
 
+type OllamaChatMessagesResponse struct {
+	Messages []OllamaChatMessage `json:"message"`
+}
+
 type OllamaRequest struct {
 	Model   string               `json:"model"`
 	System  string               `json:"system"`
@@ -226,7 +230,7 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 
 				var writer bytes.Buffer
 				if appConfig.Chat {
-					var ollamaChatResponse OllamaChatMessages
+					var ollamaChatResponse OllamaChatMessagesResponse
 					err = json.NewDecoder(response.Body).Decode(&ollamaChatResponse)
 					if err != nil {
 						client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
