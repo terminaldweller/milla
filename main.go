@@ -98,6 +98,7 @@ func printResponse(resp *genai.GenerateContentResponse) string {
 
 func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 	var Memory []MemoryElement
+
 	irc := girc.New(girc.Config{
 		Server: appConfig.IrcServer,
 		Port:   appConfig.IrcPort,
@@ -264,12 +265,22 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 				model.SetTemperature(float32(appConfig.Temp))
 				model.SetTopK(appConfig.TopK)
 				model.SetTopP(appConfig.TopP)
-				resp, err := model.GenerateContent(ctx, genai.Text(prompt))
+
+				cs := model.StartChat()
+
+				resp, err := cs.SendMessage(ctx, genai.Text(prompt))
 				if err != nil {
 					client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
 
 					return
 				}
+
+				// resp, err := model.GenerateContent(ctx, genai.Text(prompt))
+				// if err != nil {
+				// 	client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
+
+				// 	return
+				// }
 
 				var writer bytes.Buffer
 				err = quick.Highlight(
