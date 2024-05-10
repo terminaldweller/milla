@@ -241,24 +241,24 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
 				defer cancel()
 
-				httpClient := http.Client{}
-				allProxy := os.Getenv("ALL_PROXY")
-				if allProxy != "" {
-					proxyUrl, err := url.Parse(allProxy)
-					if err != nil {
-						client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
+				// httpClient := http.Client{}
+				// allProxy := os.Getenv("ALL_PROXY")
+				// if allProxy != "" {
+				// 	proxyUrl, err := url.Parse(allProxy)
+				// 	if err != nil {
+				// 		client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
 
-						return
-					}
-					transport := &http.Transport{
-						Proxy: http.ProxyURL(proxyUrl),
-					}
+				// 		return
+				// 	}
+				// 	transport := &http.Transport{
+				// 		Proxy: http.ProxyURL(proxyUrl),
+				// 	}
 
-					httpClient.Transport = transport
-				}
+				// 	httpClient.Transport = transport
+				// }
 
-				clientGemini, err := genai.NewClient(ctx, option.WithAPIKey(appConfig.Apikey), option.WithHTTPClient(&httpClient))
-				// clientGemini, err := genai.NewClient(ctx, option.WithAPIKey(appConfig.Apikey))
+				// clientGemini, err := genai.NewClient(ctx, option.WithAPIKey(appConfig.Apikey), option.WithHTTPClient(&httpClient))
+				clientGemini, err := genai.NewClient(ctx, option.WithAPIKey(appConfig.Apikey))
 				if err != nil {
 					client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
 
