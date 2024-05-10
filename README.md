@@ -1,6 +1,6 @@
 # milla
 
-Milla is an IRC bot that sends things over to an AI model when you ask it questions, prints the answer with syntax-hilighting.<br/>
+Milla is an IRC bot that sends things over to an LLM when you ask it questions, prints the answer with syntax-hilighting.<br/>
 Currently Supported Models:
 
 - Ollama
@@ -19,7 +19,7 @@ ircPort = 6697
 ircNick = "mybot"
 ircSaslUser = "mybot"
 ircSaslPass = "mypass"
-ircChannel = "#mychannel"
+ircChannels = ["#mychannel1", "#mychannel2"]
 ollamaEndpoint = ""
 temp = 0.2
 ollamaSystem = ""

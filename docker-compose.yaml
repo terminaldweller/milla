@@ -18,6 +18,7 @@ services:
     command: ["--config", "/opt/milla/config.toml"]
     volumes:
       - ./config.toml:/opt/milla/config.toml
+      - /etc/ssl/certs:/etc/ssl/certs:ro
     cap_drop:
       - ALL
     environment:
