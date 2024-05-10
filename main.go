@@ -20,7 +20,6 @@ import (
 	"github.com/lrstanley/girc"
 	"github.com/pelletier/go-toml/v2"
 	openai "github.com/sashabaranov/go-openai"
-	"golang.org/x/net/proxy"
 	"google.golang.org/api/option"
 )
 
@@ -242,14 +241,20 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
 				defer cancel()
 
-				dialer := proxy.FromEnvironment()
+				httpClient := http.Client{}
+				allProxy := os.Getenv("ALL_PROXY")
+				if allProxy != "" {
+					proxyUrl, err := url.Parse(allProxy)
+					if err != nil {
+						client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
 
-				transport := http.Transport{
-					Dial: dialer.Dial,
-				}
-				httpClient := http.Client{
-					Transport: &transport,
-					Timeout:   time.Duration(appConfig.RequestTimeout) * time.Second,
+						return
+					}
+					transport := &http.Transport{
+						Proxy: http.ProxyURL(proxyUrl),
+					}
+
+					httpClient.Transport = transport
 				}
 
 				clientGemini, err := genai.NewClient(ctx, option.WithAPIKey(appConfig.Apikey), option.WithHTTPClient(&httpClient))
