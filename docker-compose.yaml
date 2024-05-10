@@ -14,7 +14,8 @@ services:
         max-size: "100m"
     networks:
       - millanet
-    restart: unless-stopped
+    # restart: unless-stopped
+    restart: no
     command: ["--config", "/opt/milla/config.toml"]
     volumes:
       - ./config.toml:/opt/milla/config.toml
