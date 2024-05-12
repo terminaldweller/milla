@@ -27,9 +27,12 @@ import (
 )
 
 var (
-	errNotEnoughArgs = errors.New("not enough arguments")
-	errUnknCmd       = errors.New("unknown command")
-	errUnknConfig    = errors.New("unknown config name")
+	errNotEnoughArgs     = errors.New("not enough arguments")
+	errUnknCmd           = errors.New("unknown command")
+	errUnknConfig        = errors.New("unknown config name")
+	errCantSet           = errors.New("can't set field")
+	errWrongDataForField = errors.New("wrong data type for field")
+	errUnsupportedType   = errors.New("unsupported type")
 )
 
 type TomlConfig struct {
@@ -126,12 +129,12 @@ func extractLast256ColorEscapeCode(str string) (string, error) {
 
 	r, err := regexp.Compile(pattern)
 	if err != nil {
-		return "", fmt.Errorf("failed to compile regular expression: %v", err)
+		return "", fmt.Errorf("failed to compile regular expression: %w", err)
 	}
 
 	matches := r.FindAllStringSubmatch(str, -1)
 	if len(matches) == 0 {
-		return "", nil // No 256-color escape codes found
+		return "", nil
 	}
 
 	lastMatch := matches[len(matches)-1]
@@ -174,6 +177,47 @@ func getHelpString() string {
 	return helpString
 }
 
+func setFieldByName(v reflect.Value, field string, value string) error {
+	fieldValue := v.FieldByName(field)
+	if !fieldValue.IsValid() {
+		return errUnknConfig
+	}
+
+	if !fieldValue.CanSet() {
+		return errCantSet
+	}
+
+	switch fieldValue.Kind() {
+	case reflect.String:
+		fieldValue.SetString(value)
+	case reflect.Int:
+		intValue, err := strconv.Atoi(value)
+		if err != nil {
+			return errWrongDataForField
+		}
+
+		fieldValue.SetInt(int64(intValue))
+	case reflect.Float64:
+		floatValue, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return errWrongDataForField
+		}
+
+		fieldValue.SetFloat(floatValue)
+	case reflect.Bool:
+		boolValue, err := strconv.ParseBool(value)
+		if err != nil {
+			return errWrongDataForField
+		}
+
+		fieldValue.SetBool(boolValue)
+	default:
+		return errUnsupportedType
+	}
+
+	return nil
+}
+
 func runCommand(
 	client *girc.Client,
 	event girc.Event,
@@ -206,6 +250,11 @@ func runCommand(
 			client.Cmd.Reply(event, errNotEnoughArgs.Error())
 
 			break
+		}
+
+		err := setFieldByName(reflect.ValueOf(appConfig).Elem(), args[1], args[2])
+		if err != nil {
+			client.Cmd.Reply(event, err.Error())
 		}
 	case "get":
 		if len(args) < 2 { //nolint:gomnd
