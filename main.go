@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -120,8 +121,37 @@ func returnGeminiResponse(resp *genai.GenerateContentResponse) string {
 	return result
 }
 
+func extractLast256ColorEscapeCode(str string) (string, error) {
+	pattern := `\033\[38;5;(\d+)m`
+
+	r, err := regexp.Compile(pattern)
+	if err != nil {
+		return "", fmt.Errorf("failed to compile regular expression: %v", err)
+	}
+
+	matches := r.FindAllStringSubmatch(str, -1)
+	if len(matches) == 0 {
+		return "", nil // No 256-color escape codes found
+	}
+
+	lastMatch := matches[len(matches)-1]
+
+	return lastMatch[1], nil
+}
+
 func chunker(inputString string) []string {
 	chunks := strings.Split(inputString, "\n")
+
+	for count, chunk := range chunks {
+		lastColorCode, err := extractLast256ColorEscapeCode(chunk)
+		if err != nil {
+			continue
+		}
+
+		if count <= len(chunks)-2 {
+			chunks[count+1] = fmt.Sprintf("\033[38;5;%sm", lastColorCode) + chunks[count+1]
+		}
+	}
 
 	return chunks
 }
