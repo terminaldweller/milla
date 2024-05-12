@@ -3,10 +3,10 @@ module milla
 go 1.21.0
 
 require (
+	github.com/BurntSushi/toml v0.3.1
 	github.com/alecthomas/chroma/v2 v2.12.0
 	github.com/google/generative-ai-go v0.11.2
 	github.com/lrstanley/girc v0.0.0-20240125042120-9add3166e52e
-	github.com/pelletier/go-toml/v2 v2.1.1
 	github.com/sashabaranov/go-openai v1.19.3
 	google.golang.org/api v0.176.1
 )
