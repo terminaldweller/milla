@@ -437,13 +437,6 @@ func ollamaHandler(
 		}
 
 		sendToIRC(client, event, writer.String(), appConfig.ChromaFormatter)
-
-		// log.Println(writer.String())
-		// lines := strings.Split(writer.String(), "\n")
-
-		// for _, line := range lines {
-		// 	client.Cmd.Reply(event, line)
-		// }
 	})
 }
 
@@ -548,13 +541,6 @@ func geminiHandler(
 		}
 
 		sendToIRC(client, event, writer.String(), appConfig.ChromaFormatter)
-
-		// log.Println(writer.String())
-		// lines := strings.Split(writer.String(), "\n")
-
-		// for _, line := range lines {
-		// 	client.Cmd.Reply(event, line)
-		// }
 	})
 }
 
@@ -637,13 +623,6 @@ func chatGPTHandler(
 		}
 
 		sendToIRC(client, event, writer.String(), appConfig.ChromaFormatter)
-
-		// log.Println(writer.String())
-		// lines := strings.Split(writer.String(), "\n")
-
-		// for _, line := range lines {
-		// 	client.Cmd.Reply(event, line)
-		// }
 	})
 }
 
