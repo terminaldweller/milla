@@ -65,6 +65,8 @@ The formatter to use. This tells chroma how to generate the color in the output.
 - `terminal16m` for treucolor terminals
 - `html` for HTML output
 
+**_NOTE_**: please note that the terminal formatters will increase the size of the IRC event. Depending on the IRC server, this may or may not be a problem.
+
 #### provider
 
 Which LLM provider to use. The supported options are:
@@ -83,7 +85,7 @@ The system message to use for ollama.
 
 #### clientCertPath
 
-The path to the client certificate to use for SASL external authentication.
+The path to the client certificate to use for client cert authentication.
 
 #### serverPass
 
@@ -137,6 +139,8 @@ Whether to use TLS to connect to the IRC server. This option is provided to supp
 
 #### disableSTSFallback
 
+Disables the "fallback" to a non-TLS connection if the strict transport policy expires and the first attempt to reconnect back to the TLS version fails.
+
 #### allowFlood
 
 Disable [girc](https://github.com/lrstanley/girc)'s built-in flood protection.
@@ -183,9 +187,21 @@ Get the value of all config options.
 
 Set a config option on the fly. Use the same name as the config file but capitalized.
 
+## Proxy Support
+
+milla will read and use the `ALL_PROXY` environment variable.
+It is rather a non-standard way of using the env var but you define your socks5 proxies like so:
+
+```
+ALL_PROXY=127.0.0.1:9050
+```
+
+**_NOTE_**: the proxy is used for making calls to the LLMs, not for connecting to the IRC server.
+
 ## Deploy
 
 An example docker compose file is provided in the repo under `docker-compose.yaml`.
+milla can be used with [gvisor](https://gvisor.dev/)'s docker runtime, `runsc`.
 
 ```yaml
 services:
@@ -197,25 +213,30 @@ services:
       resources:
         limits:
           memory: 64M
-    user: ${UID}:${GID}
     logging:
       driver: "json-file"
       options:
         max-size: "100m"
     networks:
       - millanet
+    user: 1000:1000
     restart: unless-stopped
     command: ["--config", "/opt/milla/config.toml"]
     volumes:
-      - ./config.toml:/opt/milla/config.toml
-      - /etc/ssl/certs:/etc/ssl/certs:ro
+      - ./config-gpt.toml:/opt/milla/config.toml
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/resolv.conf:/etc/resolv.conf:ro
     cap_drop:
       - ALL
-    environment:
-      - SERVER_DEPLOYMENT_TYPE=deployment
+    runtime: runsc
 networks:
   millanet:
+    driver: bridge
 ```
+
+The env vars `UID`and `GID`need to be defined or they can replaces by your host user's uid and gid.<br/>
+
+As a convinience, there is a a [distroless](https://github.com/GoogleContainerTools/distroless) dockerfile, `Dockerfile_distroless` also provided.
 
 ## Thanks
 
