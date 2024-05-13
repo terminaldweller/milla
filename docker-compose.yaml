@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   milla:
     image: milla
@@ -8,6 +7,7 @@ services:
       resources:
         limits:
           memory: 64M
+    user: ${UID}:${GID}
     logging:
       driver: "json-file"
       options:
@@ -15,14 +15,11 @@ services:
     networks:
       - millanet
     restart: unless-stopped
-    restart: no
     command: ["--config", "/opt/milla/config.toml"]
     volumes:
       - ./config.toml:/opt/milla/config.toml
       - /etc/ssl/certs:/etc/ssl/certs:ro
     cap_drop:
       - ALL
-    environment:
-      - SERVER_DEPLOYMENT_TYPE=deployment
 networks:
   millanet:

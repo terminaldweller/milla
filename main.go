@@ -13,7 +13,6 @@ import (
 	"net/url"
 	"os"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -138,26 +137,26 @@ func returnGeminiResponse(resp *genai.GenerateContentResponse) string {
 	return result
 }
 
-func extractLast256ColorEscapeCode(str string) (string, error) {
-	pattern256F := `\033\[38;5;(\d+)m`
-	// pattern256B := `\033\[48;5;(\d+)m`
-	// pattern16mF := `\033\[38;2;(\d+);(\d+);(\d+)m`
-	// pattern16mB := `\033\[48;2;(\d+);(\d+);(\d+)m`
+// func extractLast256ColorEscapeCode(str string) (string, error) {
+// 	pattern256F := `\033\[38;5;(\d+)m`
+// 	// pattern256B := `\033\[48;5;(\d+)m`
+// 	// pattern16mF := `\033\[38;2;(\d+);(\d+);(\d+)m`
+// 	// pattern16mB := `\033\[48;2;(\d+);(\d+);(\d+)m`
 
-	r, err := regexp.Compile(pattern256F)
-	if err != nil {
-		return "", fmt.Errorf("failed to compile regular expression: %w", err)
-	}
+// 	r, err := regexp.Compile(pattern256F)
+// 	if err != nil {
+// 		return "", fmt.Errorf("failed to compile regular expression: %w", err)
+// 	}
 
-	matches := r.FindAllStringSubmatch(str, -1)
-	if len(matches) == 0 {
-		return "", nil
-	}
+// 	matches := r.FindAllStringSubmatch(str, -1)
+// 	if len(matches) == 0 {
+// 		return "", nil
+// 	}
 
-	lastMatch := matches[len(matches)-1]
+// 	lastMatch := matches[len(matches)-1]
 
-	return lastMatch[1], nil
-}
+// 	return lastMatch[1], nil
+// }
 
 func chunker(inputString string, chromaFormatter string) []string {
 	chunks := strings.Split(inputString, "\n")
@@ -677,9 +676,9 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 		}
 	}
 
-	if appConfig.EnableSasl && appConfig.ClientCertPath != "" {
-		// TODO  - add client cert support
-	}
+	// if appConfig.EnableSasl && appConfig.ClientCertPath != "" {
+	// 	// TODO  - add client cert support
+	// }
 
 	irc.Handlers.AddBg(girc.CONNECTED, func(c *girc.Client, e girc.Event) {
 		for _, channel := range appConfig.IrcChannels {
