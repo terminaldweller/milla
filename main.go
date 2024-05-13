@@ -48,17 +48,25 @@ type TomlConfig struct {
 	Apikey              string   `toml:"apikey"`
 	OllamaSystem        string   `toml:"ollamaSystem"`
 	ClientCertPath      string   `toml:"clientCertPath"`
+	ServerPass          string   `toml:"serverPass"`
+	Bind                string   `toml:"bind"`
 	Temp                float64  `toml:"temp"`
 	RequestTimeout      int      `toml:"requestTimeout"`
 	MillaReconnectDelay int      `toml:"millaReconnectDelay"`
 	IrcPort             int      `toml:"ircPort"`
 	KeepAlive           int      `toml:"keepAlive"`
 	MemoryLimit         int      `toml:"memoryLimit"`
+	PingDelay           int      `toml:"pingDelay"`
+	PingTimeout         int      `toml:"pingTimeout"`
 	TopP                float32  `toml:"topP"`
 	TopK                int32    `toml:"topK"`
 	EnableSasl          bool     `toml:"enableSasl"`
 	SkipTLSVerify       bool     `toml:"skipTLSVerify"`
 	UseTLS              bool     `toml:"useTLS"`
+	DisableSTSFallback  bool     `toml:"disableSTSFallback"`
+	AllowFlood          bool     `toml:"allowFlood"`
+	Debug               bool     `toml:"debug"`
+	Out                 bool     `toml:"out"`
 	Admins              []string `toml:"admins"`
 	IrcChannels         []string `toml:"ircChannels"`
 }
@@ -77,10 +85,16 @@ func NewTomlConfig() *TomlConfig {
 		IrcPort:             6697, //nolint:gomnd
 		KeepAlive:           600,  //nolint:gomnd
 		MemoryLimit:         20,   //nolint:gomnd
+		PingDelay:           20,   //nolint:gomnd
+		PingTimeout:         20,   //nolint:gomnd
 		TopP:                0.9,  //nolint:gomnd
 		EnableSasl:          false,
 		SkipTLSVerify:       false,
 		UseTLS:              true,
+		AllowFlood:          false,
+		DisableSTSFallback:  true,
+		Debug:               false,
+		Out:                 false,
 	}
 }
 
@@ -125,9 +139,12 @@ func returnGeminiResponse(resp *genai.GenerateContentResponse) string {
 }
 
 func extractLast256ColorEscapeCode(str string) (string, error) {
-	pattern := `\033\[38;5;(\d+)m`
+	pattern256F := `\033\[38;5;(\d+)m`
+	// pattern256B := `\033\[48;5;(\d+)m`
+	// pattern16mF := `\033\[38;2;(\d+);(\d+);(\d+)m`
+	// pattern16mB := `\033\[48;2;(\d+);(\d+);(\d+)m`
 
-	r, err := regexp.Compile(pattern)
+	r, err := regexp.Compile(pattern256F)
 	if err != nil {
 		return "", fmt.Errorf("failed to compile regular expression: %w", err)
 	}
@@ -142,25 +159,43 @@ func extractLast256ColorEscapeCode(str string) (string, error) {
 	return lastMatch[1], nil
 }
 
-func chunker(inputString string) []string {
+func chunker(inputString string, chromaFormatter string) []string {
 	chunks := strings.Split(inputString, "\n")
 
-	for count, chunk := range chunks {
-		lastColorCode, err := extractLast256ColorEscapeCode(chunk)
-		if err != nil {
-			continue
-		}
+	switch chromaFormatter {
+	case "terminal":
+		fallthrough
+	case "terminal8":
+		fallthrough
+	case "terminal16":
+		fallthrough
+	case "terminal256":
+		// for count, chunk := range chunks {
+		// 	lastColorCode, err := extractLast256ColorEscapeCode(chunk)
+		// 	if err != nil {
+		// 		continue
+		// 	}
 
-		if count <= len(chunks)-2 {
-			chunks[count+1] = fmt.Sprintf("\033[38;5;%sm", lastColorCode) + chunks[count+1]
-		}
+		// 	if count <= len(chunks)-2 {
+		// 		chunks[count+1] = fmt.Sprintf("\033[38;5;%sm", lastColorCode) + chunks[count+1]
+		// 	}
+		// }
+		fallthrough
+	case "terminal16m":
+		fallthrough
+	default:
 	}
 
 	return chunks
 }
 
-func sendToIRC(client *girc.Client, event girc.Event, message string) {
-	chunks := chunker(message)
+func sendToIRC(
+	client *girc.Client,
+	event girc.Event,
+	message string,
+	chromaFormatter string,
+) {
+	chunks := chunker(message, chromaFormatter)
 
 	for _, chunk := range chunks {
 		client.Cmd.Reply(event, chunk)
@@ -244,7 +279,7 @@ func runCommand(
 
 	switch args[0] {
 	case "help":
-		sendToIRC(client, event, getHelpString())
+		sendToIRC(client, event, getHelpString(), "noop")
 	case "set":
 		if len(args) < 3 { //nolint:gomnd
 			client.Cmd.Reply(event, errNotEnoughArgs.Error())
@@ -401,7 +436,7 @@ func ollamaHandler(
 			return
 		}
 
-		sendToIRC(client, event, writer.String())
+		sendToIRC(client, event, writer.String(), appConfig.ChromaFormatter)
 
 		// log.Println(writer.String())
 		// lines := strings.Split(writer.String(), "\n")
@@ -512,7 +547,7 @@ func geminiHandler(
 			return
 		}
 
-		sendToIRC(client, event, writer.String())
+		sendToIRC(client, event, writer.String(), appConfig.ChromaFormatter)
 
 		// log.Println(writer.String())
 		// lines := strings.Split(writer.String(), "\n")
@@ -601,7 +636,7 @@ func chatGPTHandler(
 			return
 		}
 
-		sendToIRC(client, event, writer.String())
+		sendToIRC(client, event, writer.String(), appConfig.ChromaFormatter)
 
 		// log.Println(writer.String())
 		// lines := strings.Split(writer.String(), "\n")
@@ -620,17 +655,38 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client) {
 	var GPTMemory []openai.ChatCompletionMessage
 
 	irc := girc.New(girc.Config{
-		Server: appConfig.IrcServer,
-		Port:   appConfig.IrcPort,
-		Nick:   appConfig.IrcNick,
-		User:   appConfig.IrcNick,
-		Name:   appConfig.IrcNick,
-		SSL:    appConfig.UseTLS,
+		Server:             appConfig.IrcServer,
+		Port:               appConfig.IrcPort,
+		Nick:               appConfig.IrcNick,
+		User:               appConfig.IrcNick,
+		Name:               appConfig.IrcNick,
+		SSL:                appConfig.UseTLS,
+		PingDelay:          time.Duration(appConfig.PingDelay),
+		PingTimeout:        time.Duration(appConfig.PingTimeout),
+		AllowFlood:         appConfig.AllowFlood,
+		DisableSTSFallback: appConfig.DisableSTSFallback,
+		GlobalFormat:       true,
 		TLSConfig: &tls.Config{
 			InsecureSkipVerify: appConfig.SkipTLSVerify,
 			ServerName:         appConfig.IrcServer,
 		},
 	})
+
+	if appConfig.Debug {
+		irc.Config.Debug = os.Stdout
+	}
+
+	if appConfig.Out {
+		irc.Config.Out = os.Stdout
+	}
+
+	if appConfig.ServerPass != "" {
+		irc.Config.ServerPass = appConfig.ServerPass
+	}
+
+	if appConfig.Bind != "" {
+		irc.Config.Bind = appConfig.Bind
+	}
 
 	saslUser := appConfig.IrcSaslUser
 	saslPass := appConfig.IrcSaslPass
