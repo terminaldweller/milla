@@ -1,0 +1,10 @@
+FROM golang:1.21 as builder
+WORKDIR /milla
+COPY go.sum go.mod /milla/
+COPY vendor /milla/vendor
+COPY *.go /milla/
+RUN CGO_ENABLED=0 go build
+
+FROM gcr.io/distroless/static-debian12
+COPY --from=builder /milla/milla "/usr/bin/milla"
+ENTRYPOINT ["milla"]

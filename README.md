@@ -219,7 +219,7 @@ services:
         max-size: "100m"
     networks:
       - millanet
-    user: 1000:1000
+      user: ${UID}:${GID}
     restart: unless-stopped
     command: ["--config", "/opt/milla/config.toml"]
     volumes:
@@ -236,7 +236,8 @@ networks:
 
 The env vars `UID`and `GID`need to be defined or they can replaces by your host user's uid and gid.<br/>
 
-As a convinience, there is a a [distroless](https://github.com/GoogleContainerTools/distroless) dockerfile, `Dockerfile_distroless` also provided.
+As a convinience, there is a a [distroless](https://github.com/GoogleContainerTools/distroless) dockerfile, `Dockerfile_distroless` also provided.<br/>
+A vendored build of milla is available by first running `go mod vendor` and then using the provided Dockerfile, `Dockerfile_distroless_vendored`.<br/>
 
 ## Thanks
 
