@@ -1,0 +1,19 @@
+run:
+  concurrency: 16
+  timeout: 5m
+  modules-download-mode: readonly
+  allow-parallel-runners: true
+  allow-serial-runners: true
+  go: '1.21'
+linters-settings:
+  depguard:
+    rules:
+      srcs:
+        listMode: "Strict"
+        allow:
+        - $gostd
+        - github.com/alecthomas/chroma/v2/quick
+        - github.com/google/generative-ai-go
+        - github.com/lrstanley/girc
+        - github.com/sashabaranov/go-openai
+        - github.com/BurntSushi/toml
