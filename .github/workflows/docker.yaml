@@ -41,8 +41,6 @@ jobs:
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v1
         with:
-          subject-name: docker.com/milla
+          subject-name: index.docker.io/milla
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
