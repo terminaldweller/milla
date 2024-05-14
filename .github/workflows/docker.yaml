@@ -44,3 +44,5 @@ jobs:
           subject-name: docker.com/milla
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
