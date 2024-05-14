@@ -12,6 +12,7 @@ jobs:
       packages: write
       contents: read
       attestations: write
+      id-token: read
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4
