@@ -1,0 +1,102 @@
+services:
+  terra:
+    image: milla_distroless_vendored
+    build:
+      context: .
+      dockerfile: ./Dockerfile_distroless_vendored
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+    networks:
+      - terranet
+    user: 1000:1000
+    restart: unless-stopped
+    entrypoint: ["/usr/bin/milla"]
+    command: ["--config", "/config.toml"]
+    volumes:
+      - ./config-gpt.toml:/config.toml
+      - /etc/localtime:/etc/localtime:ro
+    cap_drop:
+      - ALL
+    environment:
+      - HTTPS_PROXY=http://172.17.0.1:8120
+      - https_proxy=http://172.17.0.1:8120
+      - HTTP_PROXY=http://172.17.0.1:8120
+      - http_proxy=http://172.17.0.1:8120
+  postgres:
+    image: postgres:16-alpine3.19
+    deploy:
+      resources:
+        limits:
+          memory: 4096M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200m"
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5455:5432/tcp"
+    volumes:
+      - terra_postgres_vault:/var/lib/postgresql/data
+      - ./scripts/:/docker-entrypoint-initdb.d/:ro
+    environment:
+      - POSTGRES_PASSWORD_FILE=/run/secrets/pg_pass_secret
+      - POSTGRES_USER_FILE=/run/secrets/pg_user_secret
+      - POSTGRES_INITDB_ARGS_FILE=/run/secrets/pg_initdb_args_secret
+      - POSTGRES_DB_FILE=/run/secrets/pg_db_secret
+    networks:
+      - terranet
+      - dbnet
+    secrets:
+      - pg_pass_secret
+      - pg_user_secret
+      - pg_initdb_args_secret
+      - pg_db_secret
+    runtime: runsc
+  pgadmin:
+    image: dpage/pgadmin4:8.6
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+    environment:
+      - PGADMIN_LISTEN_PORT=${PGADMIN_LISTEN_PORT:-5050}
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL:-devi@terminaldweller.com}
+      - PGADMIN_DEFAULT_PASSWORD_FILE=/run/secrets/pgadmin_pass
+      - PGADMIN_DISABLE_POSTFIX=${PGADMIN_DISABLE_POSTFIX:-YES}
+    ports:
+      - "127.0.0.1:5050:5050/tcp"
+    restart: unless-stopped
+    volumes:
+      - terra_pgadmin_vault:/var/lib/pgadmin
+    networks:
+      - dbnet
+    secrets:
+      - pgadmin_pass
+networks:
+  terranet:
+    driver: bridge
+  dbnet:
+volumes:
+  terra_postgres_vault:
+  terra_pgadmin_vault:
+secrets:
+  pg_pass_secret:
+    file: ./pg/pg_pass_secret
+  pg_user_secret:
+    file: ./pg/pg_user_secret
+  pg_initdb_args_secret:
+    file: ./pg/pg_initdb_args_secret
+  pg_db_secret:
+    file: ./pg/pg_db_secret
+  pgadmin_pass:
+    file: ./pgadmin/pgadmin_pass

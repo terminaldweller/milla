@@ -35,6 +35,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
+          sbom: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           provenance: mode=max

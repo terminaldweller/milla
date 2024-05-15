@@ -17,3 +17,4 @@ linters-settings:
         - github.com/lrstanley/girc
         - github.com/sashabaranov/go-openai
         - github.com/BurntSushi/toml
+        - github.com/jackc/pgx/v5/pgxpool
