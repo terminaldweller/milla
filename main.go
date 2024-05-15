@@ -13,11 +13,13 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"reflect"
 	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -37,7 +39,6 @@ var (
 	errCantSet           = errors.New("can't set field")
 	errWrongDataForField = errors.New("wrong data type for field")
 	errUnsupportedType   = errors.New("unsupported type")
-	dbConnection         *pgxpool.Pool //nolint:gochecknoglobals
 )
 
 type TomlConfig struct {
@@ -82,6 +83,10 @@ type TomlConfig struct {
 	Admins              []string `toml:"admins"`
 	IrcChannels         []string `toml:"ircChannels"`
 	ScrapeChannels      []string `toml:"scrapeChannels"`
+}
+
+type AppConfig struct {
+	Ircd map[string]TomlConfig `toml:"ircd"`
 }
 
 func NewTomlConfig() *TomlConfig {
@@ -680,7 +685,7 @@ func chatGPTHandler(
 	})
 }
 
-func connectToDB(appConfig TomlConfig, context *context.Context) {
+func connectToDB(appConfig TomlConfig, context *context.Context, poolChan chan *pgxpool.Pool) {
 	for {
 		if appConfig.DatabaseUser == "" {
 			appConfig.DatabaseUser = os.Getenv("MILLA_DB_USER")
@@ -723,18 +728,14 @@ func connectToDB(appConfig TomlConfig, context *context.Context) {
 				}
 			}
 
-			dbConnection = conn
+			poolChan <- conn
 		}
 	}
 }
 
-func scrapeChannel(irc *girc.Client) {
+func scrapeChannel(irc *girc.Client, poolChan chan *pgxpool.Pool) {
 	irc.Handlers.AddBg(girc.PRIVMSG, func(client *girc.Client, event girc.Event) {
-		if dbConnection == nil {
-			log.Println("missed logging message because currently not connected to db")
-
-			return
-		}
+		pool := <-poolChan
 		query := fmt.Sprintf("INSERT INTO %s (channel,log,nick) VALUES ('%s','%s','%s')",
 			strings.ReplaceAll(event.Params[0], "#", ""),
 			event.Params[0],
@@ -743,7 +744,7 @@ func scrapeChannel(irc *girc.Client) {
 		)
 		log.Println(query)
 
-		_, err := dbConnection.Query(
+		_, err := pool.Query(
 			context.Background(), query)
 		if err != nil {
 			log.Println(err.Error())
@@ -751,12 +752,14 @@ func scrapeChannel(irc *girc.Client) {
 	})
 }
 
-func runIRC(appConfig TomlConfig, ircChan chan *girc.Client, dbChan chan *pgxpool.Pool) {
+func runIRC(appConfig TomlConfig) {
 	var OllamaMemory []MemoryElement
 
 	var GeminiMemory []*genai.Content
 
 	var GPTMemory []openai.ChatCompletionMessage
+
+	poolChan := make(chan *pgxpool.Pool, 1)
 
 	irc := girc.New(girc.Config{
 		Server:             appConfig.IrcServer,
@@ -841,10 +844,12 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client, dbChan chan *pgxpoo
 		chatGPTHandler(irc, &appConfig, &GPTMemory)
 	}
 
-	context, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
-	defer cancel()
+	if appConfig.DatabaseAddress != "" {
+		context, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
+		defer cancel()
 
-	go connectToDB(appConfig, &context)
+		go connectToDB(appConfig, &context, poolChan)
+	}
 
 	if len(appConfig.ScrapeChannels) > 0 {
 		irc.Handlers.AddBg(girc.CONNECTED, func(c *girc.Client, e girc.Event) {
@@ -853,9 +858,8 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client, dbChan chan *pgxpoo
 			}
 		})
 
-		go scrapeChannel(irc)
+		go scrapeChannel(irc, poolChan)
 	}
-	ircChan <- irc
 
 	for {
 		var dialer proxy.Dialer
@@ -863,15 +867,11 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client, dbChan chan *pgxpoo
 		if appConfig.IRCProxy != "" {
 			proxyURL, err := url.Parse(appConfig.IRCProxy)
 			if err != nil {
-				cancel()
-
 				log.Fatal(err.Error())
 			}
 
 			dialer, err = proxy.FromURL(proxyURL, &net.Dialer{Timeout: time.Duration(appConfig.RequestTimeout) * time.Second})
 			if err != nil {
-				cancel()
-
 				log.Fatal(err.Error())
 			}
 		}
@@ -887,6 +887,9 @@ func runIRC(appConfig TomlConfig, ircChan chan *girc.Client, dbChan chan *pgxpoo
 }
 
 func main() {
+	quitChannel := make(chan os.Signal, 1)
+	signal.Notify(quitChannel, syscall.SIGINT, syscall.SIGTERM)
+
 	configPath := flag.String("config", "./config.toml", "path to the config file")
 
 	flag.Parse()
@@ -896,17 +899,22 @@ func main() {
 		log.Fatal(err)
 	}
 
-	appConfig := NewTomlConfig()
+	var config AppConfig
 
-	_, err = toml.Decode(string(data), &appConfig)
+	_, err = toml.Decode(string(data), &config)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.Println(appConfig)
+	for k, v := range config.Ircd {
+		log.Println(k, v)
+	}
 
-	ircChan := make(chan *girc.Client, 1)
-	dbConn := make(chan *pgxpool.Pool, 1)
+	for _, v := range config.Ircd {
+		log.Println(v)
 
-	runIRC(*appConfig, ircChan, dbConn)
+		go runIRC(v)
+	}
+
+	<-quitChannel
 }

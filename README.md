@@ -1,7 +1,8 @@
 # milla
 
 Milla is an IRC bot that sends things over to an LLM when you ask it questions and prints the answer with optional syntax-highlighting.<br/>
-Currently Supported:
+Milla can run more than one instance of itself, use different proxies(socks5 and http), connect to more than one IRC networks and log to different databases.<br/>
+Currently supported providers:
 
 - Ollama
 - Openai
@@ -19,7 +20,7 @@ Usage of ./milla:
 
 ## Config
 
-An exhaustive example is in `config-example.toml`.
+An example is provided under `config-example.toml`. Please note that all the config options are specific to one instance which is defined by `ircd.nameofyourinstance`.<br/>
 
 #### ircServer
 
@@ -199,6 +200,67 @@ Determines which proxy to use to connect to the LLM endpoint:
 
 ```
 llmProxy = "socks5://127.0.0.1:9050"
+```
+
+### Example Config File
+
+```toml
+[ircd.devinet]
+ircServer = "irc.myawesomeircnet.com"
+ircPort = 6697
+ircNick = "milla"
+enableSasl = true
+ircSaslUser = "milla"
+ircSaslPass = "xxxxx"
+ircChannels = ["##chan1", "##chan2"]
+temp = 0.2
+requestTimeout = 10
+millaReconnectDelay = 60
+model = "gpt-3.5-turbo"
+chromaStyle = "rose-pine-moon"
+chromaFormatter = "terminal256"
+provider = "chatgpt"
+apikey = "xxxx"
+memoryLimit = 20
+admins = ["noone_has_this_nick"]
+debug = true
+out = true
+databaseAddress = "postgres:5432"
+databasePassword = "changeme"
+databaseUser = "devi"
+databaseName = "milla"
+scrapeChannels = ["#soulhack", "#warroom"]
+ircProxy = "socks5://127.0.0.1:9050"
+llmProxy = "http://127.0.0.1:8180"
+skipTLSVerify = false
+useTLS = true
+
+[ircd.liberanet]
+ircServer = "irc.libera.chat"
+ircNick = "milla"
+model = "gpt-3.5-turbo"
+ircPort = 6697
+chromaStyle = "rose-pine-moon"
+chromaFormatter = "terminal16m"
+provider = "gemini"
+apikey = "xxxx"
+temp = 0.5
+requestTimeout = 10
+millaReconnectDelay = 60
+keepAlive = 20
+memoryLimit = 20
+pingDelay = 20
+pingTimeout = 600
+skipTLSVerify = false
+useTLS = true
+disableSTSFallback = true
+allowFlood = false
+admins = ["noone_has_this_nick"]
+ircChannels = ["##milla1", "##milla2"]
+debug = true
+out = true
+ircProxy = "socks5://127.0.0.1:9051"
+llmProxy = "http://127.0.0.1:8181"
 ```
 
 ## Commands

@@ -19,7 +19,7 @@ services:
     entrypoint: ["/usr/bin/milla"]
     command: ["--config", "/config.toml"]
     volumes:
-      - ./config-gpt.toml:/config.toml
+      - ./config.toml:/config.toml
       - /etc/localtime:/etc/localtime:ro
     cap_drop:
       - ALL
