@@ -202,6 +202,14 @@ Determines which proxy to use to connect to the LLM endpoint:
 llmProxy = "socks5://127.0.0.1:9050"
 ```
 
+### ircdName
+
+Name of the milla instance, must be unique across all instances.
+
+### adminOnly
+
+Milla will only answer if the nick is in the admin list.
+
 ### Example Config File
 
 ```toml

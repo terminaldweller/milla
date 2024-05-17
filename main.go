@@ -63,6 +63,7 @@ type TomlConfig struct {
 	DatabaseName        string   `toml:"databaseName"`
 	LLMProxy            string   `toml:"llmProxy"`
 	IRCProxy            string   `toml:"ircProxy"`
+	IRCDName            string   `toml:"ircdName"`
 	Temp                float64  `toml:"temp"`
 	RequestTimeout      int      `toml:"requestTimeout"`
 	MillaReconnectDelay int      `toml:"millaReconnectDelay"`
@@ -80,6 +81,7 @@ type TomlConfig struct {
 	AllowFlood          bool     `toml:"allowFlood"`
 	Debug               bool     `toml:"debug"`
 	Out                 bool     `toml:"out"`
+	AdminOnly           bool     `toml:"adminOnly"`
 	Admins              []string `toml:"admins"`
 	IrcChannels         []string `toml:"ircChannels"`
 	ScrapeChannels      []string `toml:"scrapeChannels"`
@@ -89,32 +91,73 @@ type AppConfig struct {
 	Ircd map[string]TomlConfig `toml:"ircd"`
 }
 
-func NewTomlConfig() *TomlConfig {
-	return &TomlConfig{
-		IrcNick:             "milla",
-		IrcSaslUser:         "milla",
-		ChromaStyle:         "rose-pine-moon",
-		ChromaFormatter:     "noop",
-		Provider:            "ollama",
-		DatabaseAddress:     "postgres",
-		DatabaseUser:        "milla",
-		DatabaseName:        "milladb",
-		Temp:                0.5,  //nolint:gomnd
-		RequestTimeout:      10,   //nolint:gomnd
-		MillaReconnectDelay: 30,   //nolint:gomnd
-		IrcPort:             6697, //nolint:gomnd
-		KeepAlive:           600,  //nolint:gomnd
-		MemoryLimit:         20,   //nolint:gomnd
-		PingDelay:           20,   //nolint:gomnd
-		PingTimeout:         20,   //nolint:gomnd
-		TopP:                0.9,  //nolint:gomnd
-		EnableSasl:          false,
-		SkipTLSVerify:       false,
-		UseTLS:              true,
-		AllowFlood:          false,
-		DisableSTSFallback:  true,
-		Debug:               false,
-		Out:                 false,
+func addSaneDefaults(config *TomlConfig) {
+	if config.IrcNick == "" {
+		config.IrcNick = "milla"
+	}
+
+	if config.IrcSaslUser == "" {
+		config.IrcSaslUser = "milla"
+	}
+
+	if config.ChromaStyle == "" {
+		config.ChromaStyle = "rose-pine-moon"
+	}
+
+	if config.ChromaFormatter == "" {
+		config.ChromaFormatter = "noop"
+	}
+
+	if config.Provider == "" {
+		config.Provider = "ollam"
+	}
+
+	if config.DatabaseAddress == "" {
+		config.DatabaseAddress = "postgres"
+	}
+
+	if config.DatabaseUser == "" {
+		config.DatabaseUser = "milla"
+	}
+
+	if config.DatabaseName == "" {
+		config.DatabaseName = "milladb"
+	}
+
+	if config.Temp == 0 {
+		config.Temp = 0.5 //nollint:gomnd
+	}
+
+	if config.RequestTimeout == 0 {
+		config.RequestTimeout = 10 //nolint:gomnd
+	}
+
+	if config.MillaReconnectDelay == 0 {
+		config.MillaReconnectDelay = 30 //nolint:gomnd
+	}
+
+	if config.IrcPort == 0 {
+		config.IrcPort = 6697 //nolint:gomnd
+	}
+
+	if config.KeepAlive == 0 {
+		config.KeepAlive = 600 //nolint:gomnd
+	}
+
+	if config.MemoryLimit == 0 {
+		config.MemoryLimit = 20 //nolint:gomnd
+	}
+
+	if config.PingDelay == 0 {
+		config.PingDelay = 20 //nolint:gomnd
+	}
+
+	if config.PingTimeout == 0 {
+		config.PingTimeout = 20 //nolint:gomnd
+	}
+
+	if config.TopP == 0. {
+		config.TopP = 0.9 //nolint:gomnd
 	}
 }
 
@@ -142,6 +185,21 @@ type OllamaChatRequest struct {
 type MemoryElement struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
+}
+
+func getTableFromChanName(channel, ircdName string) string {
+	tableName := ircdName + "_" + channel
+	tableName = strings.ReplaceAll(tableName, "#", "")
+	tableName = strings.ReplaceAll(tableName, "-", "_")
+	tableName = strings.TrimSpace(tableName)
+
+	return tableName
+}
+
+func sanitizeLog(log string) string {
+	sanitizeLog := strings.ReplaceAll(log, "'", " ")
+
+	return sanitizeLog
 }
 
 func returnGeminiResponse(resp *genai.GenerateContentResponse) string {
@@ -365,6 +423,17 @@ func ollamaHandler(
 		if !strings.HasPrefix(event.Last(), appConfig.IrcNick+": ") {
 			return
 		}
+		if appConfig.AdminOnly {
+			byAdmin := false
+			for _, admin := range appConfig.Admins {
+				if event.Source.Name == admin {
+					byAdmin = true
+				}
+			}
+			if !byAdmin {
+				return
+			}
+		}
 		prompt := strings.TrimPrefix(event.Last(), appConfig.IrcNick+": ")
 		log.Println(prompt)
 
@@ -451,6 +520,8 @@ func ollamaHandler(
 		}
 		defer response.Body.Close()
 
+		log.Println("response body:", response.Body)
+
 		var writer bytes.Buffer
 
 		var ollamaChatResponse OllamaChatMessagesResponse
@@ -491,6 +562,17 @@ func geminiHandler(
 		if !strings.HasPrefix(event.Last(), appConfig.IrcNick+": ") {
 			return
 		}
+		if appConfig.AdminOnly {
+			byAdmin := false
+			for _, admin := range appConfig.Admins {
+				if event.Source.Name == admin {
+					byAdmin = true
+				}
+			}
+			if !byAdmin {
+				return
+			}
+		}
 		prompt := strings.TrimPrefix(event.Last(), appConfig.IrcNick+": ")
 		log.Println(prompt)
 
@@ -502,31 +584,6 @@ func geminiHandler(
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
 		defer cancel()
-
-		// api and http client dont work together
-		// https://github.com/google/generative-ai-go/issues/80
-
-		// httpClient := http.Client{}
-		// allProxy := os.Getenv("ALL_PROXY")
-		// if allProxy != "" {
-		// 	proxyUrl, err := url.Parse(allProxy)
-		// 	if err != nil {
-		// 		client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
-
-		// 		return
-		// 	}
-		// 	transport := &http.Transport{
-		// 		Proxy: http.ProxyURL(proxyUrl),
-		// 	}
-
-		// 	httpClient.Transport = transport
-		// }
-
-		// clientGemini, err := genai.NewClient(ctx, option.WithAPIKey(appConfig.Apikey), option.WithHTTPClient(&httpClient))
-
-		if appConfig.Apikey == "" {
-			appConfig.Apikey = os.Getenv("MILLA_APIKEY")
-		}
 
 		clientGemini, err := genai.NewClient(ctx, option.WithAPIKey(appConfig.Apikey))
 		if err != nil {
@@ -598,6 +655,17 @@ func chatGPTHandler(
 	irc.Handlers.AddBg(girc.PRIVMSG, func(client *girc.Client, event girc.Event) {
 		if !strings.HasPrefix(event.Last(), appConfig.IrcNick+": ") {
 			return
+		}
+		if appConfig.AdminOnly {
+			byAdmin := false
+			for _, admin := range appConfig.Admins {
+				if event.Source.Name == admin {
+					byAdmin = true
+				}
+			}
+			if !byAdmin {
+				return
+			}
 		}
 		prompt := strings.TrimPrefix(event.Last(), appConfig.IrcNick+": ")
 		log.Println(prompt)
@@ -685,7 +753,7 @@ func chatGPTHandler(
 	})
 }
 
-func connectToDB(appConfig TomlConfig, context *context.Context, poolChan chan *pgxpool.Pool) {
+func connectToDB(appConfig TomlConfig, ctx *context.Context, poolChan chan *pgxpool.Pool) {
 	for {
 		if appConfig.DatabaseUser == "" {
 			appConfig.DatabaseUser = os.Getenv("MILLA_DB_USER")
@@ -710,42 +778,48 @@ func connectToDB(appConfig TomlConfig, context *context.Context, poolChan chan *
 			appConfig.DatabaseAddress,
 			appConfig.DatabaseName)
 
-		conn, err := pgxpool.New(*context, dbURL)
+		log.Println("dbURL:", dbURL)
+
+		poolConfig, err := pgxpool.ParseConfig(dbURL)
+		if err != nil {
+			log.Println(err)
+		}
+
+		pool, err := pgxpool.NewWithConfig(*ctx, poolConfig)
 		if err != nil {
 			log.Println(err)
 			time.Sleep(time.Duration(appConfig.MillaReconnectDelay) * time.Second)
 		} else {
+			log.Printf("%s connected to database", appConfig.IRCDName)
+
 			for _, channel := range appConfig.ScrapeChannels {
-				query := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (id SERIAL PRIMARY KEY,channel TEXT NOT NULL,log TEXT NOT NULL,nick TEXT NOT NULL,dateadded TIMESTAMP DEFAULT CURRENT_TIMESTAMP)",
-					strings.ReplaceAll(channel, "#", ""))
-
-				log.Println(query)
-
-				_, err = conn.Query(*context, query)
+				tableName := getTableFromChanName(channel, appConfig.IRCDName)
+				query := fmt.Sprintf("create table if not exists %s (id serial primary key,channel text not null,log text not null,nick text not null,dateadded timestamp default current_timestamp)", tableName)
+				_, err = pool.Exec(*ctx, query)
 				if err != nil {
 					log.Println(err.Error())
 					time.Sleep(time.Duration(appConfig.MillaReconnectDelay) * time.Second)
 				}
 			}
 
-			poolChan <- conn
+			poolChan <- pool
 		}
 	}
 }
 
-func scrapeChannel(irc *girc.Client, poolChan chan *pgxpool.Pool) {
+func scrapeChannel(irc *girc.Client, poolChan chan *pgxpool.Pool, appConfig TomlConfig) {
 	irc.Handlers.AddBg(girc.PRIVMSG, func(client *girc.Client, event girc.Event) {
 		pool := <-poolChan
-		query := fmt.Sprintf("INSERT INTO %s (channel,log,nick) VALUES ('%s','%s','%s')",
-			strings.ReplaceAll(event.Params[0], "#", ""),
+		tableName := getTableFromChanName(event.Params[0], appConfig.IRCDName)
+		query := fmt.Sprintf(
+			"insert into %s (channel,log,nick) values ('%s','%s','%s')",
+			tableName,
 			event.Params[0],
 			event.Last(),
 			event.Source.Name,
 		)
-		log.Println(query)
 
-		_, err := pool.Query(
-			context.Background(), query)
+		_, err := pool.Exec(context.Background(), query)
 		if err != nil {
 			log.Println(err.Error())
 		}
@@ -858,7 +932,7 @@ func runIRC(appConfig TomlConfig) {
 			}
 		})
 
-		go scrapeChannel(irc, poolChan)
+		go scrapeChannel(irc, poolChan, appConfig)
 	}
 
 	for {
@@ -907,12 +981,13 @@ func main() {
 	}
 
 	for k, v := range config.Ircd {
+		addSaneDefaults(&v)
+		v.IRCDName = k
+		config.Ircd[k] = v
 		log.Println(k, v)
 	}
 
 	for _, v := range config.Ircd {
-		log.Println(v)
-
 		go runIRC(v)
 	}
 
