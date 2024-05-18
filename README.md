@@ -18,6 +18,9 @@ Usage of ./milla:
           path to the config file (default "./config.toml")
 ```
 
+The bot will respond to chat prompts if they begin with `botnick:`.<br/>
+The bot will see a chat prompt as a command if the message begins with `botnick: /`.<br/>
+
 ## Config
 
 An example is provided under `config-example.toml`. Please note that all the config options are specific to one instance which is defined by `ircd.nameofyourinstance`.<br/>
@@ -292,27 +295,6 @@ Set a config option on the fly. Use the same name as the config file but capital
 #### memstats
 
 Returns memory stats for milla.
-
-## Environment Variables
-
-- MILLA_SASL_PASSWORD
-- MILLA_SERVER_PASSWORD
-- MILLA_APIKEY
-- MILLA_DB_USER
-- MILLA_DB_PASSWORD
-- MILLA_DB_ADDRESS
-- MILLA_DB_NAME
-
-## Proxy Support
-
-milla will read and use the `ALL_PROXY` environment variable.
-It is rather a non-standard way of using the env var but you define your socks5 proxies like so:
-
-```
-ALL_PROXY=127.0.0.1:9050
-```
-
-**_NOTE_**: the proxy is used for making calls to the LLMs, not for connecting to the IRC server.
 
 ## Deploy
 
