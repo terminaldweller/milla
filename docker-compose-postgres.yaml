@@ -23,11 +23,6 @@ services:
       - /etc/localtime:/etc/localtime:ro
     cap_drop:
       - ALL
-    environment:
-      - HTTPS_PROXY=http://172.17.0.1:8120
-      - https_proxy=http://172.17.0.1:8120
-      - HTTP_PROXY=http://172.17.0.1:8120
-      - http_proxy=http://172.17.0.1:8120
   postgres:
     image: postgres:16-alpine3.19
     deploy:

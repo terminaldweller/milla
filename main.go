@@ -41,6 +41,16 @@ var (
 	errUnsupportedType   = errors.New("unsupported type")
 )
 
+type CustomCommand struct {
+	SQL    string `json:"sql"`
+	Limit  int    `json:"limit"`
+	Prompt string `json:"prompt"`
+}
+
+type CustomCommands struct {
+	CustomCommands map[string]CustomCommand `json:"customCommands"`
+}
+
 type TomlConfig struct {
 	IrcServer           string   `toml:"ircServer"`
 	IrcNick             string   `toml:"ircNick"`
@@ -64,6 +74,7 @@ type TomlConfig struct {
 	LLMProxy            string   `toml:"llmProxy"`
 	IRCProxy            string   `toml:"ircProxy"`
 	IRCDName            string   `toml:"ircdName"`
+	CommandsFile        string   `toml:"commandsFile"`
 	Temp                float64  `toml:"temp"`
 	RequestTimeout      int      `toml:"requestTimeout"`
 	MillaReconnectDelay int      `toml:"millaReconnectDelay"`
@@ -124,40 +135,44 @@ func addSaneDefaults(config *TomlConfig) {
 		config.DatabaseName = "milladb"
 	}
 
+	if config.CommandsFile == "" {
+		config.CommandsFile = "./commands.json"
+	}
+
 	if config.Temp == 0 {
 		config.Temp = 0.5 //nollint:gomnd
 	}
 
 	if config.RequestTimeout == 0 {
-		config.RequestTimeout = 10 //nolint:gomnd
+		config.RequestTimeout = 10
 	}
 
 	if config.MillaReconnectDelay == 0 {
-		config.MillaReconnectDelay = 30 //nolint:gomnd
+		config.MillaReconnectDelay = 30
 	}
 
 	if config.IrcPort == 0 {
-		config.IrcPort = 6697 //nolint:gomnd
+		config.IrcPort = 6697
 	}
 
 	if config.KeepAlive == 0 {
-		config.KeepAlive = 600 //nolint:gomnd
+		config.KeepAlive = 600
 	}
 
 	if config.MemoryLimit == 0 {
-		config.MemoryLimit = 20 //nolint:gomnd
+		config.MemoryLimit = 20
 	}
 
 	if config.PingDelay == 0 {
-		config.PingDelay = 20 //nolint:gomnd
+		config.PingDelay = 20
 	}
 
 	if config.PingTimeout == 0 {
-		config.PingTimeout = 20 //nolint:gomnd
+		config.PingTimeout = 20
 	}
 
-	if config.TopP == 0. {
-		config.TopP = 0.9 //nolint:gomnd
+	if config.TopP == 0.0 {
+		config.TopP = 0.9
 	}
 }
 
@@ -275,6 +290,10 @@ func sendToIRC(
 	chunks := chunker(message, chromaFormatter)
 
 	for _, chunk := range chunks {
+		if len(strings.TrimSpace(chunk)) == 0 {
+			continue
+		}
+
 		client.Cmd.Reply(event, chunk)
 	}
 }
@@ -333,7 +352,7 @@ func setFieldByName(v reflect.Value, field string, value string) error {
 
 func byteToMByte(bytes uint64,
 ) uint64 {
-	return bytes / 1024 / 1024
+	return bytes / 1024 / 1024 //nolint:gomnd
 }
 
 func runCommand(
@@ -404,6 +423,7 @@ func runCommand(
 		}
 	case "memstats":
 		var memStats runtime.MemStats
+
 		runtime.ReadMemStats(&memStats)
 
 		client.Cmd.Reply(event, fmt.Sprintf("Alloc: %d MiB", byteToMByte(memStats.Alloc)))
@@ -412,6 +432,143 @@ func runCommand(
 	default:
 		client.Cmd.Reply(event, errUnknCmd.Error())
 	}
+}
+
+func doOllamaRequest(
+	appConfig *TomlConfig,
+	client *girc.Client,
+	event girc.Event,
+	ollamaMemory *[]MemoryElement,
+	prompt string,
+) (*http.Response, error) {
+	var jsonPayload []byte
+
+	var err error
+
+	memoryElement := MemoryElement{
+		Role:    "user",
+		Content: prompt,
+	}
+
+	if len(*ollamaMemory) > appConfig.MemoryLimit {
+		*ollamaMemory = []MemoryElement{}
+	}
+
+	*ollamaMemory = append(*ollamaMemory, memoryElement)
+
+	ollamaRequest := OllamaChatRequest{
+		Model:      appConfig.Model,
+		Keep_alive: time.Duration(appConfig.KeepAlive),
+		Stream:     false,
+		Messages:   *ollamaMemory,
+		Options: OllamaRequestOptions{
+			Temperature: appConfig.Temp,
+		},
+	}
+
+	jsonPayload, err = json.Marshal(ollamaRequest)
+	if err != nil {
+		client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
+
+		return nil, err
+	}
+
+	log.Printf("json payload: %s", string(jsonPayload))
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
+	defer cancel()
+
+	request, err := http.NewRequest(http.MethodPost, appConfig.OllamaEndpoint, bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
+
+		return nil, err
+	}
+
+	request = request.WithContext(ctx)
+	request.Header.Set("Content-Type", "application/json")
+
+	var httpClient http.Client
+
+	var dialer proxy.Dialer
+
+	if appConfig.LLMProxy != "" {
+		proxyURL, err := url.Parse(appConfig.IRCProxy)
+		if err != nil {
+			cancel()
+
+			log.Fatal(err.Error())
+		}
+
+		dialer, err = proxy.FromURL(proxyURL, &net.Dialer{Timeout: time.Duration(appConfig.RequestTimeout) * time.Second})
+		if err != nil {
+			cancel()
+
+			log.Fatal(err.Error())
+		}
+
+		httpClient = http.Client{
+			Transport: &http.Transport{
+				Dial: dialer.Dial,
+			},
+		}
+	}
+
+	return httpClient.Do(request)
+}
+
+func ollamaRequest(
+	appConfig *TomlConfig,
+	client *girc.Client,
+	event girc.Event,
+	ollamaMemory *[]MemoryElement,
+	prompt string,
+) {
+	response, err := doOllamaRequest(appConfig, client, event, ollamaMemory, prompt)
+
+	if response == nil {
+		return
+	}
+
+	if err != nil {
+		client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
+
+		return
+	}
+	defer response.Body.Close()
+
+	log.Println("response body:", response.Body)
+
+	var writer bytes.Buffer
+
+	var ollamaChatResponse OllamaChatMessagesResponse
+
+	err = json.NewDecoder(response.Body).Decode(&ollamaChatResponse)
+	if err != nil {
+		client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
+	}
+
+	assistantElement := MemoryElement{
+		Role:    "assistant",
+		Content: ollamaChatResponse.Messages.Content,
+	}
+
+	*ollamaMemory = append(*ollamaMemory, assistantElement)
+
+	log.Println(ollamaChatResponse)
+
+	err = quick.Highlight(&writer,
+		ollamaChatResponse.Messages.Content,
+		"markdown",
+		appConfig.ChromaFormatter,
+		appConfig.ChromaStyle)
+	if err != nil {
+		client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
+
+		return
+	}
+
+	sendToIRC(client, event, writer.String(), appConfig.ChromaFormatter)
 }
 
 func ollamaHandler(
@@ -443,114 +600,90 @@ func ollamaHandler(
 			return
 		}
 
-		var jsonPayload []byte
-		var err error
-
-		memoryElement := MemoryElement{
-			Role:    "user",
-			Content: prompt,
-		}
-
-		if len(*ollamaMemory) > appConfig.MemoryLimit {
-			*ollamaMemory = []MemoryElement{}
-		}
-		*ollamaMemory = append(*ollamaMemory, memoryElement)
-
-		ollamaRequest := OllamaChatRequest{
-			Model:      appConfig.Model,
-			Keep_alive: time.Duration(appConfig.KeepAlive),
-			Stream:     false,
-			Messages:   *ollamaMemory,
-			Options: OllamaRequestOptions{
-				Temperature: appConfig.Temp,
-			},
-		}
-		jsonPayload, err = json.Marshal(ollamaRequest)
-		log.Printf("json payload: %s", string(jsonPayload))
-		if err != nil {
-			client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
-
-			return
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
-		defer cancel()
-
-		request, err := http.NewRequest(http.MethodPost, appConfig.OllamaEndpoint, bytes.NewBuffer(jsonPayload))
-		request = request.WithContext(ctx)
-		if err != nil {
-			client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
-
-			return
-		}
-
-		request.Header.Set("Content-Type", "application/json")
-
-		var httpClient http.Client
-
-		var dialer proxy.Dialer
-
-		if appConfig.LLMProxy != "" {
-			proxyURL, err := url.Parse(appConfig.IRCProxy)
-			if err != nil {
-				cancel()
-
-				log.Fatal(err.Error())
-			}
-
-			dialer, err = proxy.FromURL(proxyURL, &net.Dialer{Timeout: time.Duration(appConfig.RequestTimeout) * time.Second})
-			if err != nil {
-				cancel()
-
-				log.Fatal(err.Error())
-			}
-
-			httpClient = http.Client{
-				Transport: &http.Transport{
-					Dial: dialer.Dial,
-				},
-			}
-		}
-
-		response, err := httpClient.Do(request)
-		if err != nil {
-			client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
-
-			return
-		}
-		defer response.Body.Close()
-
-		log.Println("response body:", response.Body)
-
-		var writer bytes.Buffer
-
-		var ollamaChatResponse OllamaChatMessagesResponse
-		err = json.NewDecoder(response.Body).Decode(&ollamaChatResponse)
-		if err != nil {
-			client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
-		}
-
-		assistantElement := MemoryElement{
-			Role:    "assistant",
-			Content: ollamaChatResponse.Messages.Content,
-		}
-
-		*ollamaMemory = append(*ollamaMemory, assistantElement)
-
-		log.Println(ollamaChatResponse)
-		err = quick.Highlight(&writer,
-			ollamaChatResponse.Messages.Content,
-			"markdown",
-			appConfig.ChromaFormatter,
-			appConfig.ChromaStyle)
-		if err != nil {
-			client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
-
-			return
-		}
-
-		sendToIRC(client, event, writer.String(), appConfig.ChromaFormatter)
+		ollamaRequest(appConfig, client, event, ollamaMemory, prompt)
 	})
+}
+
+func doGeminiRequest(
+	appConfig *TomlConfig,
+	client *girc.Client,
+	event girc.Event,
+	geminiMemory *[]*genai.Content,
+	prompt string,
+) string {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
+	defer cancel()
+
+	clientGemini, err := genai.NewClient(ctx, option.WithAPIKey(appConfig.Apikey))
+	if err != nil {
+		client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
+
+		return ""
+	}
+	defer clientGemini.Close()
+
+	model := clientGemini.GenerativeModel(appConfig.Model)
+	model.SetTemperature(float32(appConfig.Temp))
+	model.SetTopK(appConfig.TopK)
+	model.SetTopP(appConfig.TopP)
+
+	cs := model.StartChat()
+
+	cs.History = *geminiMemory
+
+	resp, err := cs.SendMessage(ctx, genai.Text(prompt))
+	if err != nil {
+		client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
+
+		return ""
+	}
+
+	return returnGeminiResponse(resp)
+}
+
+func geminiRequest(
+	appConfig *TomlConfig,
+	client *girc.Client,
+	event girc.Event,
+	geminiMemory *[]*genai.Content,
+	prompt string,
+) {
+	geminiResponse := doGeminiRequest(appConfig, client, event, geminiMemory, prompt)
+	log.Println(geminiResponse)
+
+	if len(*geminiMemory) > appConfig.MemoryLimit {
+		*geminiMemory = []*genai.Content{}
+	}
+
+	*geminiMemory = append(*geminiMemory, &genai.Content{
+		Parts: []genai.Part{
+			genai.Text(prompt),
+		},
+		Role: "user",
+	})
+
+	*geminiMemory = append(*geminiMemory, &genai.Content{
+		Parts: []genai.Part{
+			genai.Text(geminiResponse),
+		},
+		Role: "model",
+	})
+
+	var writer bytes.Buffer
+
+	err := quick.Highlight(
+		&writer,
+		geminiResponse,
+		"markdown",
+		appConfig.ChromaFormatter,
+		appConfig.ChromaStyle)
+	if err != nil {
+		client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
+
+		return
+	}
+
+	sendToIRC(client, event, writer.String(), appConfig.ChromaFormatter)
 }
 
 func geminiHandler(
@@ -582,69 +715,102 @@ func geminiHandler(
 			return
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
-		defer cancel()
-
-		clientGemini, err := genai.NewClient(ctx, option.WithAPIKey(appConfig.Apikey))
-		if err != nil {
-			client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
-
-			return
-		}
-		defer clientGemini.Close()
-
-		model := clientGemini.GenerativeModel(appConfig.Model)
-		model.SetTemperature(float32(appConfig.Temp))
-		model.SetTopK(appConfig.TopK)
-		model.SetTopP(appConfig.TopP)
-
-		cs := model.StartChat()
-
-		cs.History = *geminiMemory
-
-		resp, err := cs.SendMessage(ctx, genai.Text(prompt))
-		if err != nil {
-			client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
-
-			return
-		}
-
-		geminiResponse := returnGeminiResponse(resp)
-		log.Println(geminiResponse)
-
-		if len(*geminiMemory) > appConfig.MemoryLimit {
-			*geminiMemory = []*genai.Content{}
-		}
-
-		*geminiMemory = append(*geminiMemory, &genai.Content{
-			Parts: []genai.Part{
-				genai.Text(prompt),
-			},
-			Role: "user",
-		})
-
-		*geminiMemory = append(*geminiMemory, &genai.Content{
-			Parts: []genai.Part{
-				genai.Text(geminiResponse),
-			},
-			Role: "model",
-		})
-
-		var writer bytes.Buffer
-		err = quick.Highlight(
-			&writer,
-			geminiResponse,
-			"markdown",
-			appConfig.ChromaFormatter,
-			appConfig.ChromaStyle)
-		if err != nil {
-			client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
-
-			return
-		}
-
-		sendToIRC(client, event, writer.String(), appConfig.ChromaFormatter)
+		geminiRequest(appConfig, client, event, geminiMemory, prompt)
 	})
+}
+
+func doChatGPTRequest(
+	appConfig *TomlConfig,
+	client *girc.Client,
+	event girc.Event,
+	gptMemory *[]openai.ChatCompletionMessage,
+	prompt string,
+) (openai.ChatCompletionResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
+	defer cancel()
+
+	var httpClient http.Client
+
+	if appConfig.LLMProxy != "" {
+		proxyURL, err := url.Parse(appConfig.IRCProxy)
+		if err != nil {
+			cancel()
+			client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
+
+			log.Fatal(err.Error())
+		}
+
+		dialer, err := proxy.FromURL(proxyURL, &net.Dialer{Timeout: time.Duration(appConfig.RequestTimeout) * time.Second})
+		if err != nil {
+			cancel()
+			client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
+
+			log.Fatal(err.Error())
+		}
+
+		httpClient = http.Client{
+			Transport: &http.Transport{
+				Dial: dialer.Dial,
+			},
+		}
+	}
+
+	config := openai.DefaultConfig(appConfig.Apikey)
+	config.HTTPClient = &httpClient
+
+	gptClient := openai.NewClientWithConfig(config)
+
+	*gptMemory = append(*gptMemory, openai.ChatCompletionMessage{
+		Role:    openai.ChatMessageRoleUser,
+		Content: prompt,
+	})
+
+	resp, err := gptClient.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
+		Model:    appConfig.Model,
+		Messages: *gptMemory,
+	})
+
+	return resp, err
+}
+
+func chatGPTRequest(
+	appConfig *TomlConfig,
+	client *girc.Client,
+	event girc.Event,
+	gptMemory *[]openai.ChatCompletionMessage,
+	prompt string,
+) {
+	resp, err := doChatGPTRequest(appConfig, client, event, gptMemory, prompt)
+	if err != nil {
+		client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
+
+		return
+	}
+
+	*gptMemory = append(*gptMemory, openai.ChatCompletionMessage{
+		Role:    openai.ChatMessageRoleAssistant,
+		Content: resp.Choices[0].Message.Content,
+	})
+
+	if len(*gptMemory) > appConfig.MemoryLimit {
+		*gptMemory = []openai.ChatCompletionMessage{}
+	}
+
+	var writer bytes.Buffer
+
+	err = quick.Highlight(
+		&writer,
+		resp.Choices[0].Message.Content,
+		"markdown",
+		appConfig.ChromaFormatter,
+		appConfig.ChromaStyle)
+	if err != nil {
+		client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
+
+		return
+	}
+
+	sendToIRC(client, event, writer.String(), appConfig.ChromaFormatter)
 }
 
 func chatGPTHandler(
@@ -676,80 +842,7 @@ func chatGPTHandler(
 			return
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
-		defer cancel()
-
-		var httpClient http.Client
-
-		if appConfig.LLMProxy != "" {
-			proxyURL, err := url.Parse(appConfig.IRCProxy)
-			if err != nil {
-				cancel()
-
-				log.Fatal(err.Error())
-			}
-
-			dialer, err := proxy.FromURL(proxyURL, &net.Dialer{Timeout: time.Duration(appConfig.RequestTimeout) * time.Second})
-			if err != nil {
-				cancel()
-
-				log.Fatal(err.Error())
-			}
-
-			httpClient = http.Client{
-				Transport: &http.Transport{
-					Dial: dialer.Dial,
-				},
-			}
-		}
-
-		if appConfig.Apikey == "" {
-			appConfig.Apikey = os.Getenv("MILLA_APIKEY")
-		}
-
-		config := openai.DefaultConfig(appConfig.Apikey)
-		config.HTTPClient = &httpClient
-
-		gptClient := openai.NewClientWithConfig(config)
-
-		*gptMemory = append(*gptMemory, openai.ChatCompletionMessage{
-			Role:    openai.ChatMessageRoleUser,
-			Content: prompt,
-		})
-
-		resp, err := gptClient.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
-			Model:    appConfig.Model,
-			Messages: *gptMemory,
-		})
-		if err != nil {
-			client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
-
-			return
-		}
-
-		*gptMemory = append(*gptMemory, openai.ChatCompletionMessage{
-			Role:    openai.ChatMessageRoleAssistant,
-			Content: resp.Choices[0].Message.Content,
-		})
-
-		if len(*gptMemory) > appConfig.MemoryLimit {
-			*gptMemory = []openai.ChatCompletionMessage{}
-		}
-
-		var writer bytes.Buffer
-		err = quick.Highlight(
-			&writer,
-			resp.Choices[0].Message.Content,
-			"markdown",
-			appConfig.ChromaFormatter,
-			appConfig.ChromaStyle)
-		if err != nil {
-			client.Cmd.ReplyTo(event, fmt.Sprintf("error: %s", err.Error()))
-
-			return
-		}
-
-		sendToIRC(client, event, writer.String(), appConfig.ChromaFormatter)
+		chatGPTRequest(appConfig, client, event, gptMemory, prompt)
 	})
 }
 
@@ -794,7 +887,14 @@ func connectToDB(appConfig TomlConfig, ctx *context.Context, poolChan chan *pgxp
 
 			for _, channel := range appConfig.ScrapeChannels {
 				tableName := getTableFromChanName(channel, appConfig.IRCDName)
-				query := fmt.Sprintf("create table if not exists %s (id serial primary key,channel text not null,log text not null,nick text not null,dateadded timestamp default current_timestamp)", tableName)
+				query := fmt.Sprintf(
+					`create table if not exists %s (
+					id serial primary key,
+					channel text not null,
+					log text not null,
+					nick text not null,
+					dateadded timestamp default current_timestamp
+				)`, tableName)
 				_, err = pool.Exec(*ctx, query)
 				if err != nil {
 					log.Println(err.Error())
@@ -814,7 +914,7 @@ func scrapeChannel(irc *girc.Client, poolChan chan *pgxpool.Pool, appConfig Toml
 		query := fmt.Sprintf(
 			"insert into %s (channel,log,nick) values ('%s','%s','%s')",
 			tableName,
-			event.Params[0],
+			sanitizeLog(event.Params[0]),
 			event.Last(),
 			event.Source.Name,
 		)
@@ -848,7 +948,7 @@ func runIRC(appConfig TomlConfig) {
 		DisableSTSFallback: appConfig.DisableSTSFallback,
 		GlobalFormat:       true,
 		TLSConfig: &tls.Config{
-			InsecureSkipVerify: appConfig.SkipTLSVerify, // #nosec G402
+			InsecureSkipVerify: appConfig.SkipTLSVerify,
 			ServerName:         appConfig.IrcServer,
 		},
 	})
