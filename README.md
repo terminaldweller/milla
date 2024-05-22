@@ -465,6 +465,11 @@ go mod vendor
 go build
 ```
 
+## FAQ
+
+- I end up with color escape sequences getting printed at the end of a line/begging of the next line. what gives?
+  This is happening because you have reached the message limit on irc which 512 for the event. This practically leaves around 390-400 character left for the message itself. Certain ircds allow for bigger sizes and certain clients might do. But most ircds dont send `linelen` to the clients. In a closed-loop situation where you control everything, as in, the ircd and all the clients(i.e. a private irc network), you can try to increase the linelen for the ircd and the client. Please note that the client in this case is girc. You irc client can have its own set of limits too. The 512 limit is hardcoded in girc. You can vendor the build or use the vendored dockerfile, change the hard limit and run milla with an increased limit. Needless to say, you can try to use a chromaFormatter that produces less characters which is basically not using treucolor or `terminal16m`.
+
 ## Thanks
 
 - [girc](https://github.com/lrstanley/girc)
