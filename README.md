@@ -229,6 +229,23 @@ webirc password to use.
 
 webirc address to use.
 
+## Custom Commands
+Custom commands let you define a command that does a SQL query to the database and performs the given task. Here's an example:
+```toml
+[ircd.devinet_terra.customCommands.digest]
+sql = "select log from liberanet_milla_us_market_news;"
+limit = 10
+prompt = "give me digest of the provided news"
+[ircd.devinet_terra.customCommands.summarize]
+sql= "select log from liberanet_milla_us_market_news;"
+limit= 300
+prompt= "given all the data, summarize the news for me"
+```
+In the above example digest and summarize will be the names of the commands: `milla: /cmd summarize`.<br/>
+Currently you should only ask for the log column in the query. Asking for the other column will result in the query not succeeding.<br/>
+The `limit` parameter limits the number of SQL queries that are used to generate the response. Whether you hit the token limit of the provider you use and the cost is something you should be aware of.<br/>
+NOTE: since each milla instance can have its own database, all instances might not necessarily have access to all the data milla is gathering but if you use the same database for all the instances, all instances will have access to all the gathered data.<br/>
+
 ### Example Config File
 
 ```toml
@@ -288,6 +305,14 @@ debug = true
 out = true
 ircProxy = "socks5://127.0.0.1:9051"
 llmProxy = "http://127.0.0.1:8181"
+[ircd.liberanet.customCommands.digest]
+sql = "select log from liberanet_milla_us_market_news;"
+limit = 10
+prompt = "give me digest of the provided news"
+[ircd.liberanet.customCommands.summarize]
+sql= "select log from liberanet_milla_us_market_news;"
+limit= 300
+prompt= "given all the data, summarize the news for me"
 ```
 
 ## Commands
@@ -471,7 +496,7 @@ secrets:
 The env vars `UID`and `GID`need to be defined or they can replaces by your host user's uid and gid.<br/>
 
 As a convenience, there is a a [distroless](https://github.com/GoogleContainerTools/distroless) dockerfile, `Dockerfile_distroless` also provided.<br/>
-A vendored build of milla is available by first running `go mod vendor` and then using the provided Dockerfile, `Dockerfile_distroless_vendored`.<br/>
+A vendored build of milla is available by first running `go mod vendor` and then using the provided dockerfile, `Dockerfile_distroless_vendored`.<br/>
 
 ### Build
 
@@ -491,8 +516,8 @@ go build
 
 ## FAQ
 
-- I end up with color escape sequences getting printed at the end of a line/begging of the next line. what gives?
-  This is happening because you have reached the message limit on irc which 512 for the event. This practically leaves around 390-400 character left for the message itself. Certain ircds allow for bigger sizes and certain clients might do. But most ircds dont send `linelen` to the clients. In a closed-loop situation where you control everything, as in, the ircd and all the clients(i.e. a private irc network), you can try to increase the linelen for the ircd and the client. Please note that the client in this case is girc. You irc client can have its own set of limits too. The 512 limit is hardcoded in girc. You can vendor the build or use the vendored dockerfile, change the hard limit and run milla with an increased limit. Needless to say, you can try to use a chromaFormatter that produces less characters which is basically not using treucolor or `terminal16m`.
+- I end up with color escape sequences getting printed at the end of a line/begging of the next line. What gives?
+  This is happening because you have reached the message limit on irc which 512 for the event. This practically leaves around 390-400 character left for the message itself. Certain ircds allow for bigger sizes and certain clients might do. But most ircds dont send `linelen` to the clients. In a closed-loop situation where you control everything, as in, the ircd and all the clients(i.e. A private irc network), you can try to increase the `linelen` for the ircd and the client. Please note that the client in this case is girc. You irc client can have its own set of limits too. The 512 limit is hardcoded in girc. You can vendor the build or use the vendored dockerfile, change the hard limit and run milla with an increased limit. Needless to say, you can try to use a chromaFormatter that produces less characters which is basically not using truecolor or `terminal16m`.
 
 ## Thanks
 
