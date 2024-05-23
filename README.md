@@ -213,6 +213,22 @@ Name of the milla instance, must be unique across all instances.
 
 Milla will only answer if the nick is in the admin list.
 
+### webIRCGateway
+
+webirc gateway to use.
+
+### webIRCHostname
+
+webirc hostname to use.
+
+### webIRCPassword
+
+webirc password to use.
+
+### webIRCAddress
+
+webirc address to use.
+
 ### Example Config File
 
 ```toml
@@ -282,7 +298,7 @@ Prints the help message.
 
 #### get
 
-Get the value of a config option. Use the same name as the config file but capitalized.
+Get the value of a config option. Use the same name as the config file but capitalized: `/get chromaFormatter`
 
 #### getall
 
@@ -290,11 +306,19 @@ Get the value of all config options.
 
 #### set
 
-Set a config option on the fly. Use the same name as the config file but capitalized.
+Set a config option on the fly. Use the same name as the config file but capitalized: `/set chromaFormatter noop`
 
 #### memstats
 
 Returns memory stats for milla.
+
+#### join
+
+Joins a channel: `/join #channel`
+
+#### leave
+
+Leaves a channel: `/leave #channel`
 
 ## Deploy
 
