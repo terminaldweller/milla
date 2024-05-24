@@ -1,12 +1,17 @@
 # milla
 
-Milla is an IRC bot that sends things over to an LLM when you ask it questions and prints the answer with optional syntax-highlighting.<br/>
-Milla can run more than one instance of itself, use different proxies(socks5 and http), connect to more than one IRC networks and log to different databases.<br/>
-Currently supported providers:
+Milla is an IRC bot that:
 
-- Ollama
-- Openai
-- Gemini
+- sends things over to an LLM when you ask it questions and prints the answer with optional syntax-highlighting.<br/>
+  Currently supported providers:
+
+* Ollama
+* Openai
+* Gemini
+
+- Milla can run more than one instance of itself
+- Each instance can connect to a different ircd, and will get the full set of configs, e.g. different proxies, different postgres instance, ...
+- You can define custom commands in the form of SQL queries to the database with the SQL query result being passed to the bot along with the given prompt and an optional limit so you don't go bankrupt(unless you are running ollama locally like the smart cookie that you are).<br/>
 
 ![milla](./milla.png)
 
@@ -159,7 +164,7 @@ Whether to write raw messages to stdout.
 
 #### admins
 
-List of adimns for the bot. Only admins can use commands.
+List of admins for the bot. Only admins can use commands.
 
 ```
 admins = ["admin1", "admin2"]
@@ -173,25 +178,27 @@ List of channels for the bot to join when it connects to the server.
 ircChannels = ["#channel1", "#channel2"]
 ```
 
+Please note that the bot does not have to join a channel to be usable. One can simply query the bot directly as well.<br/>
+
 ### databaseUser
 
-Name of the database user. Can also be passed an an environment variable.
+Name of the database user.
 
 ### databasePassword
 
-Password for the database user. Can also be passed an an environment variable.
+Password for the database user.
 
 ### databaseAddress
 
-Address of the database. Can also be passed as and environment variable.
+Address of the database.
 
 ### databaseName
 
-Name of the database. Can also be passed as and environment variable.
+Name of the database.
 
 ### ircProxy
 
-Determines which proxy to use to connect to the irc network:
+Determines which proxy to use to connect to the IRC network:
 
 ```
 ircProxy = "socks5://127.0.0.1:9050"
@@ -230,7 +237,9 @@ webirc password to use.
 webirc address to use.
 
 ## Custom Commands
+
 Custom commands let you define a command that does a SQL query to the database and performs the given task. Here's an example:
+
 ```toml
 [ircd.devinet_terra.customCommands.digest]
 sql = "select log from liberanet_milla_us_market_news;"
@@ -241,10 +250,11 @@ sql= "select log from liberanet_milla_us_market_news;"
 limit= 300
 prompt= "given all the data, summarize the news for me"
 ```
+
 In the above example digest and summarize will be the names of the commands: `milla: /cmd summarize`.<br/>
 Currently you should only ask for the log column in the query. Asking for the other column will result in the query not succeeding.<br/>
 The `limit` parameter limits the number of SQL queries that are used to generate the response. Whether you hit the token limit of the provider you use and the cost is something you should be aware of.<br/>
-NOTE: since each milla instance can have its own database, all instances might not necessarily have access to all the data milla is gathering but if you use the same database for all the instances, all instances will have access to all the gathered data.<br/>
+NOTE: since each milla instance can have its own database, all instances might not necessarily have access to all the data milla is gathering. If you use the same database for all the instances, all instances will have access to all the gathered data.<br/>
 
 ### Example Config File
 
@@ -521,10 +531,17 @@ go build
 
 ## Thanks
 
+Milla would not exist without the following projects:
+
 - [girc](https://github.com/lrstanley/girc)
 - [chroma](https://github.com/alecthomas/chroma)
 - [pgx](https://github.com/jackc/pgx)
 - [ollama](https://github.com/ollama/ollama)
+- [toml](https://github.com/BurntSushi/toml)
+
+## TODO
+
+- plugins support
 
 ## Similar Projects
 

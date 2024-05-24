@@ -356,6 +356,113 @@ func byteToMByte(bytes uint64,
 	return bytes / 1024 / 1024
 }
 
+func handleCustomCommand(
+	args []string,
+	client *girc.Client,
+	event girc.Event,
+	appConfig *TomlConfig,
+) {
+	log.Println(args)
+	if len(args) < 2 {
+		client.Cmd.Reply(event, errNotEnoughArgs.Error())
+
+		return
+	}
+
+	customCommand := appConfig.CustomCommands[args[1]]
+
+	if customCommand.SQL == "" {
+		client.Cmd.Reply(event, "empty sql commands in the custom command")
+
+		return
+	}
+
+	if appConfig.pool == nil {
+		client.Cmd.Reply(event, "no database connection")
+
+		return
+	}
+
+	log.Println(customCommand.SQL)
+
+	rows, err := appConfig.pool.Query(context.Background(), customCommand.SQL)
+	if err != nil {
+		client.Cmd.Reply(event, "error: "+err.Error())
+
+		return
+	}
+	defer rows.Close()
+
+	logs, err := pgx.CollectRows(rows, pgx.RowToStructByName[LogModel])
+	if err != nil {
+		log.Println(err.Error())
+
+		return
+	}
+
+	log.Println(logs)
+	logs = logs[:customCommand.Limit]
+
+	if err != nil {
+		log.Println(err.Error())
+
+		return
+	}
+
+	switch appConfig.Provider {
+	case "chatgpt":
+		var gptMemory []openai.ChatCompletionMessage
+
+		for _, log := range logs {
+			gptMemory = append(gptMemory, openai.ChatCompletionMessage{
+				Role:    openai.ChatMessageRoleUser,
+				Content: log.Log,
+			})
+		}
+
+		chatGPTRequest(appConfig, client, event, &gptMemory, customCommand.Prompt)
+	case "gemini":
+		var geminiMemory []*genai.Content
+
+		for _, log := range logs {
+			geminiMemory = append(geminiMemory, &genai.Content{
+				Parts: []genai.Part{
+					genai.Text(log.Log),
+				},
+				Role: "user",
+			})
+		}
+
+		geminiRequest(appConfig, client, event, &geminiMemory, customCommand.Prompt)
+	case "ollama":
+		var ollamaMemory []MemoryElement
+
+		for _, log := range logs {
+			ollamaMemory = append(ollamaMemory, MemoryElement{
+				Role:    "user",
+				Content: log.Log,
+			})
+		}
+
+		ollamaRequest(appConfig, client, event, &ollamaMemory, customCommand.Prompt)
+	default:
+	}
+}
+
+func isFromAdmin(admins []string, event girc.Event) bool {
+	messageFromAdmin := false
+
+	for _, admin := range admins {
+		if event.Source.Name == admin {
+			messageFromAdmin = true
+
+			break
+		}
+	}
+
+	return messageFromAdmin
+}
+
 func runCommand(
 	client *girc.Client,
 	event girc.Event,
@@ -366,17 +473,7 @@ func runCommand(
 	cmd = strings.TrimPrefix(cmd, "/")
 	args := strings.Split(cmd, " ")
 
-	messageFromAdmin := false
-
-	for _, admin := range appConfig.Admins {
-		if event.Source.Name == admin {
-			messageFromAdmin = true
-
-			break
-		}
-	}
-
-	if !messageFromAdmin {
+	if appConfig.AdminOnly && !isFromAdmin(appConfig.Admins, event) {
 		return
 	}
 
@@ -431,6 +528,10 @@ func runCommand(
 		client.Cmd.Reply(event, fmt.Sprintf("TotalAlloc: %d MiB", byteToMByte(memStats.TotalAlloc)))
 		client.Cmd.Reply(event, fmt.Sprintf("Sys: %d MiB", byteToMByte(memStats.Sys)))
 	case "join":
+		if !isFromAdmin(appConfig.Admins, event) {
+			break
+		}
+
 		if len(args) < 2 {
 			client.Cmd.Reply(event, errNotEnoughArgs.Error())
 
@@ -439,6 +540,10 @@ func runCommand(
 
 		client.Cmd.Join(args[1])
 	case "leave":
+		if !isFromAdmin(appConfig.Admins, event) {
+			break
+		}
+
 		if len(args) < 2 {
 			client.Cmd.Reply(event, errNotEnoughArgs.Error())
 
@@ -447,64 +552,11 @@ func runCommand(
 
 		client.Cmd.Part(args[1])
 	case "cmd":
-		if len(args) < 2 {
-			client.Cmd.Reply(event, errNotEnoughArgs.Error())
-
+		if !isFromAdmin(appConfig.Admins, event) {
 			break
 		}
 
-		customCommand := appConfig.CustomCommands[args[1]]
-
-		if customCommand.SQL == "" {
-			client.Cmd.Reply(event, "empty sql commands in the custom command")
-
-			break
-		}
-
-		if appConfig.pool == nil {
-			client.Cmd.Reply(event, "no database connection")
-
-			break
-		}
-
-		log.Println(customCommand.SQL)
-
-		rows, err := appConfig.pool.Query(context.Background(), customCommand.SQL)
-		defer rows.Close()
-
-		if err != nil {
-			client.Cmd.Reply(event, "error: "+err.Error())
-
-			break
-		}
-
-		var gptMemory []openai.ChatCompletionMessage
-
-		logs, err := pgx.CollectRows(rows, pgx.RowToStructByName[LogModel])
-		if err != nil {
-			log.Println(err.Error())
-
-			break
-		}
-
-		log.Println(logs)
-		logs = logs[:customCommand.Limit]
-
-		if err != nil {
-			log.Println(err.Error())
-
-			break
-		}
-
-		for _, log := range logs {
-			gptMemory = append(gptMemory, openai.ChatCompletionMessage{
-				Role:    openai.ChatMessageRoleUser,
-				Content: log.Log,
-			})
-		}
-
-		chatGPTRequest(appConfig, client, event, &gptMemory, customCommand.Prompt)
-
+		handleCustomCommand(args, client, event, appConfig)
 	default:
 		client.Cmd.Reply(event, errUnknCmd.Error())
 	}
@@ -937,22 +989,6 @@ func chatGPTHandler(
 
 func connectToDB(appConfig *TomlConfig, ctx *context.Context, poolChan chan *pgxpool.Pool) {
 	for {
-		if appConfig.DatabaseUser == "" {
-			appConfig.DatabaseUser = os.Getenv("MILLA_DB_USER")
-		}
-
-		if appConfig.DatabasePassword == "" {
-			appConfig.DatabasePassword = os.Getenv("MILLA_DB_PASSWORD")
-		}
-
-		if appConfig.DatabaseAddress == "" {
-			appConfig.DatabaseAddress = os.Getenv("MILLA_DB_ADDRESS")
-		}
-
-		if appConfig.DatabaseName == "" {
-			appConfig.DatabaseName = os.Getenv("MILLA_DB_NAME")
-		}
-
 		dbURL := fmt.Sprintf(
 			"postgres://%s:%s@%s/%s",
 			appConfig.DatabaseUser,
@@ -1059,10 +1095,6 @@ func runIRC(appConfig TomlConfig) {
 		irc.Config.Out = os.Stdout
 	}
 
-	if appConfig.ServerPass == "" {
-		appConfig.ServerPass = os.Getenv("MILLA_SERVER_PASSWORD")
-	}
-
 	irc.Config.ServerPass = appConfig.ServerPass
 
 	if appConfig.Bind != "" {
@@ -1073,17 +1105,7 @@ func runIRC(appConfig TomlConfig) {
 		irc.Config.Name = appConfig.Name
 	}
 
-	saslUser := appConfig.IrcSaslUser
-
-	var saslPass string
-
-	if appConfig.IrcSaslPass == "" {
-		saslPass = os.Getenv("MILLA_SASL_PASSWORD")
-	} else {
-		saslPass = appConfig.IrcSaslPass
-	}
-
-	if appConfig.EnableSasl && saslUser != "" && saslPass != "" {
+	if appConfig.EnableSasl && appConfig.IrcSaslPass != "" && appConfig.IrcSaslUser != "" {
 		irc.Config.SASL = &girc.SASLPlain{
 			User: appConfig.IrcSaslUser,
 			Pass: appConfig.IrcSaslPass,
