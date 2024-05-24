@@ -400,8 +400,11 @@ func handleCustomCommand(
 		return
 	}
 
+	if customCommand.Limit != 0 {
+		logs = logs[:customCommand.Limit]
+	}
+
 	log.Println(logs)
-	logs = logs[:customCommand.Limit]
 
 	if err != nil {
 		log.Println(err.Error())

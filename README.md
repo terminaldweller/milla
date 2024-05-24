@@ -254,6 +254,7 @@ prompt= "given all the data, summarize the news for me"
 In the above example digest and summarize will be the names of the commands: `milla: /cmd summarize`.<br/>
 Currently you should only ask for the log column in the query. Asking for the other column will result in the query not succeeding.<br/>
 The `limit` parameter limits the number of SQL queries that are used to generate the response. Whether you hit the token limit of the provider you use and the cost is something you should be aware of.<br/>
+A `limit` value of 0 disables the limit on the amount of rows that are passed to milla.<br/>
 NOTE: since each milla instance can have its own database, all instances might not necessarily have access to all the data milla is gathering. If you use the same database for all the instances, all instances will have access to all the gathered data.<br/>
 
 ### Example Config File
