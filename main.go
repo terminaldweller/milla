@@ -83,6 +83,7 @@ type TomlConfig struct {
 	WebIRCGateway       string                   `toml:"webIRCGateway"`
 	WebIRCHostname      string                   `toml:"webIRCHostname"`
 	WebIRCAddress       string                   `toml:"webIRCAddress"`
+	PluginPath          string                   `toml:"pluginPath"`
 	CustomCommands      map[string]CustomCommand `toml:"customCommands"`
 	Temp                float64                  `toml:"temp"`
 	RequestTimeout      int                      `toml:"requestTimeout"`
@@ -353,7 +354,7 @@ func setFieldByName(v reflect.Value, field string, value string) error {
 
 func byteToMByte(bytes uint64,
 ) uint64 {
-	return bytes / 1024 / 1024
+	return bytes / 1024 / 1024 //nolint: mnd,gomnd
 }
 
 func handleCustomCommand(
@@ -363,7 +364,8 @@ func handleCustomCommand(
 	appConfig *TomlConfig,
 ) {
 	log.Println(args)
-	if len(args) < 2 {
+
+	if len(args) < 2 { //nolint: mnd,gomnd
 		client.Cmd.Reply(event, errNotEnoughArgs.Error())
 
 		return
@@ -484,7 +486,7 @@ func runCommand(
 	case "help":
 		sendToIRC(client, event, getHelpString(), "noop")
 	case "set":
-		if len(args) < 3 {
+		if len(args) < 3 { //nolint: mnd,gomnd
 			client.Cmd.Reply(event, errNotEnoughArgs.Error())
 
 			break
@@ -495,7 +497,7 @@ func runCommand(
 			client.Cmd.Reply(event, err.Error())
 		}
 	case "get":
-		if len(args) < 2 {
+		if len(args) < 2 { //nolint: mnd,gomnd
 			client.Cmd.Reply(event, errNotEnoughArgs.Error())
 
 			break
@@ -514,12 +516,12 @@ func runCommand(
 
 		client.Cmd.Reply(event, fmt.Sprintf("%v", field.Interface()))
 	case "getall":
-		v := reflect.ValueOf(*appConfig)
-		t := v.Type()
+		value := reflect.ValueOf(*appConfig)
+		t := value.Type()
 
-		for i := 0; i < v.NumField(); i++ {
+		for i := range value.NumField() {
 			field := t.Field(i)
-			fieldValue := v.Field(i).Interface()
+			fieldValue := value.Field(i).Interface()
 			client.Cmd.Reply(event, fmt.Sprintf("%s: %v", field.Name, fieldValue))
 		}
 	case "memstats":
@@ -535,7 +537,7 @@ func runCommand(
 			break
 		}
 
-		if len(args) < 2 {
+		if len(args) < 2 { //nolint: mnd,gomnd
 			client.Cmd.Reply(event, errNotEnoughArgs.Error())
 
 			break
@@ -547,7 +549,7 @@ func runCommand(
 			break
 		}
 
-		if len(args) < 2 {
+		if len(args) < 2 { //nolint: mnd,gomnd
 			client.Cmd.Reply(event, errNotEnoughArgs.Error())
 
 			break

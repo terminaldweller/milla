@@ -9,6 +9,7 @@ require (
 	github.com/jackc/pgx/v5 v5.5.5
 	github.com/lrstanley/girc v0.0.0-20240125042120-9add3166e52e
 	github.com/sashabaranov/go-openai v1.19.3
+	github.com/yuin/gopher-lua v1.1.1
 	golang.org/x/net v0.24.0
 	google.golang.org/api v0.176.1
 )

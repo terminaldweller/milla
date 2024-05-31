@@ -4,7 +4,7 @@ run:
   modules-download-mode: readonly
   allow-parallel-runners: true
   allow-serial-runners: true
-  go: '1.21'
+  go: '1.22.3'
 linters-settings:
   depguard:
     rules:
@@ -20,3 +20,4 @@ linters-settings:
         - github.com/jackc/pgx/v5
         - github.com/jackc/pgx/v5/pgxpool
         - github.com/jackc/pgx/v5/pgtype
+        - github.com/yuin/gopher-lua
