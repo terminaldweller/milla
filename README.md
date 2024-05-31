@@ -540,6 +540,7 @@ go build
 Milla would not exist without the following projects:
 
 - [girc](https://github.com/lrstanley/girc)
+- [gopher-lua](https://github.com/yuin/gopher-lua)
 - [chroma](https://github.com/alecthomas/chroma)
 - [pgx](https://github.com/jackc/pgx)
 - [ollama](https://github.com/ollama/ollama)
