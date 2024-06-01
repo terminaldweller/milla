@@ -27,16 +27,15 @@ func registerStrucAsLuaMetaTable[T any](
 		),
 	)
 
-	var zero [0]T
+	var dummyType T
+	tableMethods := luaTableGenFactory(reflect.TypeOf(dummyType), checkStruct)
 
 	luaState.SetField(
 		metaTable,
 		"__index",
 		luaState.SetFuncs(
 			luaState.NewTable(),
-			luaTableGenFactory(reflect.TypeOf(zero),
-				checkStruct,
-			),
+			tableMethods,
 		),
 	)
 }
@@ -55,6 +54,7 @@ func newStructFunctionFactory[T any](structType T, metaTableName string) func(*l
 
 func checkStruct[T any](luaState *lua.LState) *T {
 	userData := luaState.CheckUserData(1)
+
 	if v, ok := userData.Value.(*T); ok {
 		return v
 	}
@@ -143,8 +143,8 @@ func luaTableGenFactory[T any](
 }
 
 func RegisterCustomLuaTypes(luaState *lua.LState) {
-	registerStrucAsLuaMetaTable(luaState, checkStruct, TomlConfig{}, "toml_config")
-	registerStrucAsLuaMetaTable(luaState, checkStruct, CustomCommand{}, "custom_command")
+	registerStrucAsLuaMetaTable[TomlConfig](luaState, checkStruct, TomlConfig{}, "toml_config")
+	registerStrucAsLuaMetaTable[CustomCommand](luaState, checkStruct, CustomCommand{}, "custom_command")
 }
 
 func returnAllPlugins(pluginPath string) ([]string, error) {
