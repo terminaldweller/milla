@@ -1046,6 +1046,8 @@ func runIRC(appConfig TomlConfig) {
 		chatGPTHandler(irc, &appConfig, &GPTMemory)
 	}
 
+	go LoadAllPlugins(&appConfig, irc)
+
 	if appConfig.DatabaseAddress != "" {
 		context, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
 		defer cancel()

@@ -47,7 +47,7 @@ type TomlConfig struct {
 	WebIRCGateway       string                   `toml:"webIRCGateway"`
 	WebIRCHostname      string                   `toml:"webIRCHostname"`
 	WebIRCAddress       string                   `toml:"webIRCAddress"`
-	PluginPath          string                   `toml:"pluginPath"`
+	Plugins             []string                 `toml:"plugins"`
 	CustomCommands      map[string]CustomCommand `toml:"customCommands"`
 	Temp                float64                  `toml:"temp"`
 	RequestTimeout      int                      `toml:"requestTimeout"`

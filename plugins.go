@@ -1,11 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"os"
 	"reflect"
 
+	"github.com/lrstanley/girc"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -180,33 +179,36 @@ func RegisterCustomLuaTypes(luaState *lua.LState) {
 	registerStructAsLuaMetaTable[LogModel](luaState, checkStruct, LogModel{}, "log_model")
 }
 
-func returnAllPlugins(pluginPath string) ([]string, error) {
-	pluginList := make([]string, 0)
+func sendMessageClosure(luaState *lua.LState, client *girc.Client) func(*lua.LState) int {
+	return func(luaState *lua.LState) int {
+		message := luaState.CheckString(1)
+		target := luaState.CheckString(2)
 
-	files, err := os.ReadDir(pluginPath)
-	if err != nil {
-		return pluginList, fmt.Errorf("Error reading plugins directory: %v", err)
+		client.Cmd.Message(target, message)
+
+		return 0
 	}
-
-	for _, file := range files {
-		pluginList = append(pluginList, file.Name())
-	}
-
-	return pluginList, nil
 }
 
-func LoadAllPlugins(appConfig *TomlConfig) {
+func RunScript(scriptPath string, client *girc.Client) {
 	luaState := lua.NewState()
 	defer luaState.Close()
 
 	RegisterCustomLuaTypes(luaState)
 
-	allPlugins, err := returnAllPlugins(appConfig.PluginPath)
+	luaState.SetGlobal("send_message", luaState.NewFunction(sendMessageClosure(luaState, client)))
+
+	log.Print("Running script: ", scriptPath)
+	err := luaState.DoFile(scriptPath)
+
 	if err != nil {
-		luaState.Close()
-
-		log.Fatal(err) //nolint: gocritic
+		log.Print(err)
 	}
+}
 
-	log.Println(allPlugins)
+func LoadAllPlugins(appConfig *TomlConfig, client *girc.Client) {
+	for _, scriptPath := range appConfig.Plugins {
+		log.Print("Loading plugin: ", scriptPath)
+		go RunScript(scriptPath, client)
+	}
 }
