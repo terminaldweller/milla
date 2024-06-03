@@ -4,12 +4,14 @@ go 1.22.3
 
 require (
 	github.com/BurntSushi/toml v0.3.1
+	github.com/ailncode/gluaxmlpath v0.0.0-20161126153117-6ce478ecb4a6
 	github.com/alecthomas/chroma/v2 v2.12.0
 	github.com/google/generative-ai-go v0.11.2
 	github.com/jackc/pgx/v5 v5.5.5
 	github.com/lrstanley/girc v0.0.0-20240125042120-9add3166e52e
 	github.com/sashabaranov/go-openai v1.19.3
 	github.com/yuin/gopher-lua v1.1.1
+	gitlab.com/megalithic-llc/gluasocket v0.3.1
 	golang.org/x/net v0.24.0
 	google.golang.org/api v0.176.1
 )
@@ -34,6 +36,8 @@ require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
+	github.com/kr/text v0.2.0 // indirect
+	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.49.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.49.0 // indirect
@@ -50,4 +54,5 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240415180920-8c6c420018be // indirect
 	google.golang.org/grpc v1.63.2 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
+	gopkg.in/xmlpath.v2 v2.0.0-20150820204837-860cbeca3ebc // indirect
 )

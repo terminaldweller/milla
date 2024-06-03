@@ -4,19 +4,22 @@ import (
 	"log"
 	"reflect"
 
+	"github.com/ailncode/gluaxmlpath"
 	"github.com/lrstanley/girc"
 	lua "github.com/yuin/gopher-lua"
+	"gitlab.com/megalithic-llc/gluasocket"
 )
 
 func registerStructAsLuaMetaTable[T any](
 	luaState *lua.LState,
+	luaLTable *lua.LTable,
 	checkStruct func(luaState *lua.LState) *T,
 	structType T,
 	metaTableName string,
 ) {
 	metaTable := luaState.NewTypeMetatable(metaTableName)
 
-	luaState.SetGlobal(metaTableName, metaTable)
+	luaState.SetField(luaLTable, metaTableName, metaTable)
 
 	luaState.SetField(
 		metaTable,
@@ -173,16 +176,10 @@ func luaTableGenFactory[T any](
 	return tableMethods
 }
 
-func RegisterCustomLuaTypes(luaState *lua.LState) {
-	registerStructAsLuaMetaTable[TomlConfig](luaState, checkStruct, TomlConfig{}, "toml_config")
-	registerStructAsLuaMetaTable[CustomCommand](luaState, checkStruct, CustomCommand{}, "custom_command")
-	registerStructAsLuaMetaTable[LogModel](luaState, checkStruct, LogModel{}, "log_model")
-}
-
 func sendMessageClosure(luaState *lua.LState, client *girc.Client) func(*lua.LState) int {
 	return func(luaState *lua.LState) int {
 		message := luaState.CheckString(1)
-		target := luaState.CheckString(2)
+		target := luaState.CheckString(2) //nolint: mnd,gomnd
 
 		client.Cmd.Message(target, message)
 
@@ -190,17 +187,58 @@ func sendMessageClosure(luaState *lua.LState, client *girc.Client) func(*lua.LSt
 	}
 }
 
+func ircJoinChannelClosure(luaState *lua.LState, client *girc.Client) func(*lua.LState) int {
+	return func(luaState *lua.LState) int {
+		channel := luaState.CheckString(1)
+
+		client.Cmd.Join(channel)
+
+		return 0
+	}
+}
+
+func ircPartChannelClosure(luaState *lua.LState, client *girc.Client) func(*lua.LState) int {
+	return func(luaState *lua.LState) int {
+		channel := luaState.CheckString(1)
+
+		client.Cmd.Part(channel)
+
+		return 0
+	}
+}
+
+func millaModuleLoaderClosure(luaState *lua.LState, client *girc.Client) func(*lua.LState) int {
+	return func(luaState *lua.LState) int {
+		exports := map[string]lua.LGFunction{
+			"send_message": lua.LGFunction(sendMessageClosure(luaState, client)),
+			"join_channel": lua.LGFunction(ircJoinChannelClosure(luaState, client)),
+			"part_channel": lua.LGFunction(ircPartChannelClosure(luaState, client)),
+		}
+		millaModule := luaState.SetFuncs(luaState.NewTable(), exports)
+
+		registerStructAsLuaMetaTable[TomlConfig](luaState, millaModule, checkStruct, TomlConfig{}, "toml_config")
+		registerStructAsLuaMetaTable[CustomCommand](luaState, millaModule, checkStruct, CustomCommand{}, "custom_command")
+		registerStructAsLuaMetaTable[LogModel](luaState, millaModule, checkStruct, LogModel{}, "log_model")
+
+		luaState.SetGlobal("milla", millaModule)
+
+		luaState.Push(millaModule)
+
+		return 1
+	}
+}
+
 func RunScript(scriptPath string, client *girc.Client) {
 	luaState := lua.NewState()
 	defer luaState.Close()
 
-	RegisterCustomLuaTypes(luaState)
-
-	luaState.SetGlobal("send_message", luaState.NewFunction(sendMessageClosure(luaState, client)))
+	luaState.PreloadModule("milla", millaModuleLoaderClosure(luaState, client))
+	gluasocket.Preload(luaState)
+	gluaxmlpath.Preload(luaState)
 
 	log.Print("Running script: ", scriptPath)
-	err := luaState.DoFile(scriptPath)
 
+	err := luaState.DoFile(scriptPath)
 	if err != nil {
 		log.Print(err)
 	}
@@ -209,6 +247,7 @@ func RunScript(scriptPath string, client *girc.Client) {
 func LoadAllPlugins(appConfig *TomlConfig, client *girc.Client) {
 	for _, scriptPath := range appConfig.Plugins {
 		log.Print("Loading plugin: ", scriptPath)
+
 		go RunScript(scriptPath, client)
 	}
 }
