@@ -1,0 +1,7 @@
+rssfeeds:
+  - name: "one"
+    url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCaiL2GDNpLYH6Wokkk1VNcg"
+  - name: "two"
+    url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCd26IHBHcbtxD7pUdnIgiCw"
+  - name: "three"
+    url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCS4FAVeYW_IaZqAbqhlvxlA"

@@ -2,9 +2,12 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"reflect"
 
 	"github.com/ailncode/gluaxmlpath"
+	"github.com/cjoudrey/gluahttp"
+	"github.com/kohkimakimoto/gluayaml"
 	"github.com/lrstanley/girc"
 	lua "github.com/yuin/gopher-lua"
 	"gitlab.com/megalithic-llc/gluasocket"
@@ -235,6 +238,8 @@ func RunScript(scriptPath string, client *girc.Client) {
 	luaState.PreloadModule("milla", millaModuleLoaderClosure(luaState, client))
 	gluasocket.Preload(luaState)
 	gluaxmlpath.Preload(luaState)
+	luaState.PreloadModule("http", gluahttp.NewHttpModule(&http.Client{}).Loader)
+	luaState.PreloadModule("yaml", gluayaml.Loader)
 
 	log.Print("Running script: ", scriptPath)
 

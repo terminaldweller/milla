@@ -236,6 +236,10 @@ webirc password to use.
 
 webirc address to use.
 
+### plugins
+
+A list of plugins to load:`plugins = ["./plugins/rss.lua", "./plugins/test.lua"]`
+
 ## Custom Commands
 
 Custom commands let you define a command that does a SQL query to the database and performs the given task. Here's an example:
@@ -524,6 +528,89 @@ For a vendored build:
 go mod vendor
 go build
 ```
+
+### Plugins and Scripting
+
+milla can be extended with plugins. The plugins are written in lua and are loaded at runtime. The plugins are loaded after an IRC connection has been made.<br/>
+
+An example plugin is provided under `plugins/rss.lua`.<br/>
+
+```yaml
+rssfeeds:
+  - name: "one"
+    url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCaiL2GDNpLYH6Wokkk1VNcg"
+  - name: "two"
+    url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCd26IHBHcbtxD7pUdnIgiCw"
+  - name: "three"
+    url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCS4FAVeYW_IaZqAbqhlvxlA"
+```
+
+```lua
+local milla = require("milla")
+local yaml = require("yaml")
+local http = require("http")
+local xmlpath = require("xmlpath")
+
+local function read_file(file)
+    local f = assert(io.open(file, "rb"))
+    local content = f:read("*all")
+    f:close()
+    return content
+end
+
+local function get_rss_feed()
+    local yaml_config = read_file("./plugins/rss.yaml")
+    local config = yaml.parse(yaml_config)
+    local titles = {}
+    local author_names = {}
+    local uris = {}
+    local rss_feed_list = {}
+
+    for _, v in pairs(config.rssfeeds) do
+        local response, err = http.request("GET", v.url)
+        local node, err = xmlpath.loadxml(response.body)
+
+        local path, err = xmlpath.compile("//entry/title")
+        local iterator = path:iter(node)
+        for _, match in ipairs(iterator) do
+            table.insert(titles, match:string())
+        end
+
+        path, err = xmlpath.compile("//entry/author/name")
+        iterator = path:iter(node)
+        for _, match in ipairs(iterator) do
+            table.insert(author_names, match:string())
+        end
+
+        path, err = xmlpath.compile("//entry/author/uri")
+        iterator = path:iter(node)
+        for _, match in ipairs(iterator) do
+            table.insert(uris, match:string())
+        end
+    end
+
+    for i = 1, #titles do
+        table.insert(rss_feed_list,
+                     author_names[i] .. ": " .. titles[i] .. " -- " .. uris[i])
+    end
+
+    return rss_feed_list
+end
+
+local function rss_feed()
+    local rss_feeds = get_rss_feed()
+    for _, v in pairs(rss_feeds) do milla.send_message(v, "#rssfeed") end
+end
+
+rss_feed()
+```
+More of milla's functionality will be available over time.<br/>'
+
+The following libraries are loaded by milla by default:
+* [gluaxmlpath](https://github.com/ailncode/gluaxmlpath)
+* [gluahttp](https://github.com/cjoudrey/gluahttp)
+* [gluayaml](https://github.com/kohkimakimoto/gluayaml)
+* [gluasocket](https://gitlab.com/megalithic-llc/gluasocket)
 
 ## FAQ
 

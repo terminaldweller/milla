@@ -6,8 +6,10 @@ require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/ailncode/gluaxmlpath v0.0.0-20161126153117-6ce478ecb4a6
 	github.com/alecthomas/chroma/v2 v2.12.0
+	github.com/cjoudrey/gluahttp v0.0.0-20201111170219-25003d9adfa9
 	github.com/google/generative-ai-go v0.11.2
 	github.com/jackc/pgx/v5 v5.5.5
+	github.com/kohkimakimoto/gluayaml v0.0.0-20160815032708-6fe413d49d73
 	github.com/lrstanley/girc v0.0.0-20240125042120-9add3166e52e
 	github.com/sashabaranov/go-openai v1.19.3
 	github.com/yuin/gopher-lua v1.1.1
@@ -55,4 +57,5 @@ require (
 	google.golang.org/grpc v1.63.2 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/xmlpath.v2 v2.0.0-20150820204837-860cbeca3ebc // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
