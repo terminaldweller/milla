@@ -9,7 +9,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-func registerStrucAsLuaMetaTable[T any](
+func registerStructAsLuaMetaTable[T any](
 	luaState *lua.LState,
 	checkStruct func(luaState *lua.LState) *T,
 	structType T,
@@ -96,6 +96,22 @@ func getterSetterFactory[T any](
 				fieldValue.SetInt(int64(luaState.CheckInt(2))) //nolint: mnd,gomnd
 			case reflect.Bool:
 				fieldValue.SetBool(luaState.CheckBool(2)) //nolint: mnd,gomnd
+			case reflect.Uint:
+				fieldValue.SetUint(uint64(luaState.CheckInt(2))) //nolint: mnd,gomnd
+			case reflect.Uint8:
+				fieldValue.SetUint(uint64(luaState.CheckInt(2))) //nolint: mnd,gomnd
+			case reflect.Uint16:
+				fieldValue.SetUint(uint64(luaState.CheckInt(2))) //nolint: mnd,gomnd
+			case reflect.Uint32:
+				fieldValue.SetUint(uint64(luaState.CheckInt(2))) //nolint: mnd,gomnd
+			case reflect.Uint64:
+				fieldValue.SetUint(uint64(luaState.CheckInt(2))) //nolint: mnd,gomnd
+			case reflect.Func:
+			case reflect.Ptr:
+			case reflect.Struct:
+			case reflect.Slice:
+			case reflect.Array:
+			case reflect.Map:
 			default:
 				log.Print("unsupported type")
 			}
@@ -122,6 +138,22 @@ func getterSetterFactory[T any](
 			luaState.Push(lua.LNumber(fieldValue.Int()))
 		case reflect.Bool:
 			luaState.Push(lua.LBool(fieldValue.Bool()))
+		case reflect.Uint:
+			luaState.Push(lua.LNumber(fieldValue.Uint()))
+		case reflect.Uint8:
+			luaState.Push(lua.LNumber(fieldValue.Uint()))
+		case reflect.Uint16:
+			luaState.Push(lua.LNumber(fieldValue.Uint()))
+		case reflect.Uint32:
+			luaState.Push(lua.LNumber(fieldValue.Uint()))
+		case reflect.Uint64:
+			luaState.Push(lua.LNumber(fieldValue.Uint()))
+		case reflect.Func:
+		case reflect.Ptr:
+		case reflect.Struct:
+		case reflect.Slice:
+		case reflect.Array:
+		case reflect.Map:
 		default:
 			log.Print("unsupported type")
 		}
@@ -143,8 +175,9 @@ func luaTableGenFactory[T any](
 }
 
 func RegisterCustomLuaTypes(luaState *lua.LState) {
-	registerStrucAsLuaMetaTable[TomlConfig](luaState, checkStruct, TomlConfig{}, "toml_config")
-	registerStrucAsLuaMetaTable[CustomCommand](luaState, checkStruct, CustomCommand{}, "custom_command")
+	registerStructAsLuaMetaTable[TomlConfig](luaState, checkStruct, TomlConfig{}, "toml_config")
+	registerStructAsLuaMetaTable[CustomCommand](luaState, checkStruct, CustomCommand{}, "custom_command")
+	registerStructAsLuaMetaTable[LogModel](luaState, checkStruct, LogModel{}, "log_model")
 }
 
 func returnAllPlugins(pluginPath string) ([]string, error) {
