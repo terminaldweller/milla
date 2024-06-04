@@ -1,4 +1,4 @@
-FROM golang:1.22-alpine3.19 as builder
+FROM golang:1.22-alpine3.20 as builder
 RUN apk update && \
       apk upgrade && \
       apk add go git
@@ -8,7 +8,7 @@ RUN go mod download
 COPY *.go /milla/
 RUN go build
 
-FROM alpine:3.19
+FROM alpine:3.20
 ENV HOME /home/user
 RUN set -eux; \
   adduser -u 1001 -D -h "$HOME" user; \
