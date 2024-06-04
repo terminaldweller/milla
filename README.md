@@ -12,6 +12,7 @@ Milla is an IRC bot that:
 - Milla can run more than one instance of itself
 - Each instance can connect to a different ircd, and will get the full set of configs, e.g. different proxies, different postgres instance, ...
 - You can define custom commands in the form of SQL queries to the database with the SQL query result being passed to the bot along with the given prompt and an optional limit so you don't go bankrupt(unless you are running ollama locally like the smart cookie that you are).<br/>
+- lua plugin system to extend the bot's functionality.<br/>
 
 ![milla](./milla.png)
 
@@ -604,13 +605,17 @@ end
 
 rss_feed()
 ```
-More of milla's functionality will be available over time.<br/>'
+
+The example rss plugin, accepts a yaml file as input, reeds the provided rss feeds once, extracts the title, author name and link to the resource, sends the feed over to the `#rssfeed` irc channel and exits.<br/>
+
+More of milla's functionality will be available through milla's lua module over time.<br/>'
 
 The following libraries are loaded by milla by default:
-* [gluaxmlpath](https://github.com/ailncode/gluaxmlpath)
-* [gluahttp](https://github.com/cjoudrey/gluahttp)
-* [gluayaml](https://github.com/kohkimakimoto/gluayaml)
-* [gluasocket](https://gitlab.com/megalithic-llc/gluasocket)
+
+- [gluaxmlpath](https://github.com/ailncode/gluaxmlpath)
+- [gluahttp](https://github.com/cjoudrey/gluahttp)
+- [gluayaml](https://github.com/kohkimakimoto/gluayaml)
+- [gluasocket](https://gitlab.com/megalithic-llc/gluasocket)
 
 ## FAQ
 
