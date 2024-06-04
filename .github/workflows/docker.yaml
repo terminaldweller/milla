@@ -39,9 +39,14 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           provenance: mode=max
-      # - name: Generate artifact attestation
-      #   uses: actions/attest-build-provenance@v1
+      # - name: Docker Scout
+      #   id: docker-scout
+      #   if: ${{ github.event_name == 'pull_request' }}
+      #   uses: docker/scout-action@v1
       #   with:
-      #     subject-name: index.docker.io/milla
-      #     subject-digest: ${{ steps.push.outputs.digest }}
-      #     push-to-registry: true
+      #     command: cves
+      #     image: ${{ github.event.repository.name }}
+      #     ignore-unchanged: true
+      #     only-severities: critical,high,medium,low
+      #     write-comment: true
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}

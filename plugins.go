@@ -7,8 +7,10 @@ import (
 
 	"github.com/ailncode/gluaxmlpath"
 	"github.com/cjoudrey/gluahttp"
+	"github.com/google/generative-ai-go/genai"
 	"github.com/kohkimakimoto/gluayaml"
 	"github.com/lrstanley/girc"
+	openai "github.com/sashabaranov/go-openai"
 	lua "github.com/yuin/gopher-lua"
 	"gitlab.com/megalithic-llc/gluasocket"
 )
@@ -210,12 +212,60 @@ func ircPartChannelClosure(luaState *lua.LState, client *girc.Client) func(*lua.
 	}
 }
 
-func millaModuleLoaderClosure(luaState *lua.LState, client *girc.Client) func(*lua.LState) int {
+func ollamaRequestClosure(luaState *lua.LState, client *girc.Client, appConfig *TomlConfig) func(*lua.LState) int {
+	return func(luaState *lua.LState) int {
+		prompt := luaState.CheckString(1)
+
+		result, err := DoOllamaRequest(appConfig, client, &[]MemoryElement{}, prompt)
+		if err != nil {
+			log.Print(err)
+		}
+
+		luaState.Push(lua.LString(result))
+
+		return 1
+	}
+}
+
+func geminiRequestClosure(luaState *lua.LState, client *girc.Client, appConfig *TomlConfig) func(*lua.LState) int {
+	return func(luaState *lua.LState) int {
+		prompt := luaState.CheckString(1)
+
+		result, err := DoGeminiRequest(appConfig, client, &[]*genai.Content{}, prompt)
+		if err != nil {
+			log.Print(err)
+		}
+
+		luaState.Push(lua.LString(result))
+
+		return 1
+	}
+}
+
+func chatGPTRequestClosure(luaState *lua.LState, client *girc.Client, appConfig *TomlConfig) func(*lua.LState) int {
+	return func(luaState *lua.LState) int {
+		prompt := luaState.CheckString(1)
+
+		result, err := DoChatGPTRequest(appConfig, client, &[]openai.ChatCompletionMessage{}, prompt)
+		if err != nil {
+			log.Print(err)
+		}
+
+		luaState.Push(lua.LString(result))
+
+		return 1
+	}
+}
+
+func millaModuleLoaderClosure(luaState *lua.LState, client *girc.Client, appConfig *TomlConfig) func(*lua.LState) int {
 	return func(luaState *lua.LState) int {
 		exports := map[string]lua.LGFunction{
-			"send_message": lua.LGFunction(sendMessageClosure(luaState, client)),
-			"join_channel": lua.LGFunction(ircJoinChannelClosure(luaState, client)),
-			"part_channel": lua.LGFunction(ircPartChannelClosure(luaState, client)),
+			"send_message":          lua.LGFunction(sendMessageClosure(luaState, client)),
+			"join_channel":          lua.LGFunction(ircJoinChannelClosure(luaState, client)),
+			"part_channel":          lua.LGFunction(ircPartChannelClosure(luaState, client)),
+			"send_ollama_request":   lua.LGFunction(ollamaRequestClosure(luaState, client, appConfig)),
+			"send_gemini_request":   lua.LGFunction(geminiRequestClosure(luaState, client, appConfig)),
+			"send_chat_gpt_request": lua.LGFunction(chatGPTRequestClosure(luaState, client, appConfig)),
 		}
 		millaModule := luaState.SetFuncs(luaState.NewTable(), exports)
 
@@ -231,11 +281,11 @@ func millaModuleLoaderClosure(luaState *lua.LState, client *girc.Client) func(*l
 	}
 }
 
-func RunScript(scriptPath string, client *girc.Client) {
+func RunScript(scriptPath string, client *girc.Client, appConfig *TomlConfig) {
 	luaState := lua.NewState()
 	defer luaState.Close()
 
-	luaState.PreloadModule("milla", millaModuleLoaderClosure(luaState, client))
+	luaState.PreloadModule("milla", millaModuleLoaderClosure(luaState, client, appConfig))
 	gluasocket.Preload(luaState)
 	gluaxmlpath.Preload(luaState)
 	luaState.PreloadModule("http", gluahttp.NewHttpModule(&http.Client{}).Loader)
@@ -253,6 +303,6 @@ func LoadAllPlugins(appConfig *TomlConfig, client *girc.Client) {
 	for _, scriptPath := range appConfig.Plugins {
 		log.Print("Loading plugin: ", scriptPath)
 
-		go RunScript(scriptPath, client)
+		go RunScript(scriptPath, client, appConfig)
 	}
 }

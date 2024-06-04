@@ -328,7 +328,10 @@ func handleCustomCommand(
 			})
 		}
 
-		chatGPTRequest(appConfig, client, event, &gptMemory, customCommand.Prompt)
+		result := ChatGPTRequestProcessor(appConfig, client, event, &gptMemory, customCommand.Prompt)
+		if result != "" {
+			sendToIRC(client, event, result, appConfig.ChromaFormatter)
+		}
 	case "gemini":
 		var geminiMemory []*genai.Content
 
@@ -341,7 +344,10 @@ func handleCustomCommand(
 			})
 		}
 
-		geminiRequest(appConfig, client, event, &geminiMemory, customCommand.Prompt)
+		result := GeminiRequestProcessor(appConfig, client, event, &geminiMemory, customCommand.Prompt)
+		if result != "" {
+			sendToIRC(client, event, result, appConfig.ChromaFormatter)
+		}
 	case "ollama":
 		var ollamaMemory []MemoryElement
 
@@ -352,7 +358,10 @@ func handleCustomCommand(
 			})
 		}
 
-		ollamaRequest(appConfig, client, event, &ollamaMemory, customCommand.Prompt)
+		result := OllamaRequestProcessor(appConfig, client, event, &ollamaMemory, customCommand.Prompt)
+		if result != "" {
+			sendToIRC(client, event, result, appConfig.ChromaFormatter)
+		}
 	default:
 	}
 }
@@ -470,13 +479,12 @@ func runCommand(
 	}
 }
 
-func doOllamaRequest(
+func DoOllamaRequest(
 	appConfig *TomlConfig,
 	client *girc.Client,
-	event girc.Event,
 	ollamaMemory *[]MemoryElement,
 	prompt string,
-) (*http.Response, error) {
+) (string, error) {
 	var jsonPayload []byte
 
 	var err error
@@ -504,9 +512,8 @@ func doOllamaRequest(
 
 	jsonPayload, err = json.Marshal(ollamaRequest)
 	if err != nil {
-		client.Cmd.ReplyTo(event, "error: "+err.Error())
 
-		return nil, fmt.Errorf("could not marshal json payload: %v", err)
+		return "", err
 	}
 
 	log.Printf("json payload: %s", string(jsonPayload))
@@ -516,9 +523,8 @@ func doOllamaRequest(
 
 	request, err := http.NewRequest(http.MethodPost, appConfig.OllamaEndpoint, bytes.NewBuffer(jsonPayload))
 	if err != nil {
-		client.Cmd.ReplyTo(event, "error: "+err.Error())
 
-		return nil, fmt.Errorf("could not make a new http request: %v", err)
+		return "", err
 	}
 
 	request = request.WithContext(ctx)
@@ -549,66 +555,71 @@ func doOllamaRequest(
 			},
 		}
 	}
+	response, err := httpClient.Do(request)
 
-	return httpClient.Do(request)
-}
-
-func ollamaRequest(
-	appConfig *TomlConfig,
-	client *girc.Client,
-	event girc.Event,
-	ollamaMemory *[]MemoryElement,
-	prompt string,
-) {
-	response, err := doOllamaRequest(appConfig, client, event, ollamaMemory, prompt)
-
-	if response == nil {
-		return
+	if err != nil {
+		return "", err
 	}
 
 	if err != nil {
-		client.Cmd.ReplyTo(event, "error: "+err.Error())
 
-		return
+		return "", err
 	}
 
 	defer response.Body.Close()
 
 	log.Println("response body:", response.Body)
 
-	var writer bytes.Buffer
-
 	var ollamaChatResponse OllamaChatMessagesResponse
 
 	err = json.NewDecoder(response.Body).Decode(&ollamaChatResponse)
 	if err != nil {
+		return "", err
+	}
+
+	return ollamaChatResponse.Messages.Content, nil
+}
+
+func OllamaRequestProcessor(
+	appConfig *TomlConfig,
+	client *girc.Client,
+	event girc.Event,
+	ollamaMemory *[]MemoryElement,
+	prompt string,
+) string {
+	response, err := DoOllamaRequest(appConfig, client, ollamaMemory, prompt)
+	if err != nil {
 		client.Cmd.ReplyTo(event, "error: "+err.Error())
+
+		return ""
 	}
 
 	assistantElement := MemoryElement{
 		Role:    "assistant",
-		Content: ollamaChatResponse.Messages.Content,
+		Content: response,
 	}
 
 	*ollamaMemory = append(*ollamaMemory, assistantElement)
 
-	log.Println(ollamaChatResponse)
+	log.Println(response)
+
+	var writer bytes.Buffer
 
 	err = quick.Highlight(&writer,
-		ollamaChatResponse.Messages.Content,
+		response,
 		"markdown",
 		appConfig.ChromaFormatter,
 		appConfig.ChromaStyle)
 	if err != nil {
 		client.Cmd.ReplyTo(event, "error: "+err.Error())
 
-		return
+		return ""
 	}
 
-	sendToIRC(client, event, writer.String(), appConfig.ChromaFormatter)
+	return writer.String()
 }
 
-func ollamaHandler(
+func OllamaHandler(
 	irc *girc.Client,
 	appConfig *TomlConfig,
 	ollamaMemory *[]MemoryElement,
@@ -641,25 +652,26 @@ func ollamaHandler(
 			return
 		}
 
-		ollamaRequest(appConfig, client, event, ollamaMemory, prompt)
+		result := OllamaRequestProcessor(appConfig, client, event, ollamaMemory, prompt)
+		if result != "" {
+			sendToIRC(client, event, result, appConfig.ChromaFormatter)
+		}
 	})
 }
 
-func doGeminiRequest(
+func DoGeminiRequest(
 	appConfig *TomlConfig,
 	client *girc.Client,
-	event girc.Event,
 	geminiMemory *[]*genai.Content,
 	prompt string,
-) string {
+) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
 	defer cancel()
 
 	clientGemini, err := genai.NewClient(ctx, option.WithAPIKey(appConfig.Apikey))
 	if err != nil {
-		client.Cmd.ReplyTo(event, "error: "+err.Error())
 
-		return ""
+		return "", err
 	}
 	defer clientGemini.Close()
 
@@ -674,22 +686,27 @@ func doGeminiRequest(
 
 	resp, err := cs.SendMessage(ctx, genai.Text(prompt))
 	if err != nil {
-		client.Cmd.ReplyTo(event, "error: "+err.Error())
 
-		return ""
+		return "", err
 	}
 
-	return returnGeminiResponse(resp)
+	return returnGeminiResponse(resp), nil
 }
 
-func geminiRequest(
+func GeminiRequestProcessor(
 	appConfig *TomlConfig,
 	client *girc.Client,
 	event girc.Event,
 	geminiMemory *[]*genai.Content,
 	prompt string,
-) {
-	geminiResponse := doGeminiRequest(appConfig, client, event, geminiMemory, prompt)
+) string {
+	geminiResponse, err := DoGeminiRequest(appConfig, client, geminiMemory, prompt)
+	if err != nil {
+		client.Cmd.ReplyTo(event, "error: "+err.Error())
+
+		return ""
+	}
+
 	log.Println(geminiResponse)
 
 	if len(*geminiMemory) > appConfig.MemoryLimit {
@@ -712,7 +729,7 @@ func geminiRequest(
 
 	var writer bytes.Buffer
 
-	err := quick.Highlight(
+	err = quick.Highlight(
 		&writer,
 		geminiResponse,
 		"markdown",
@@ -721,13 +738,13 @@ func geminiRequest(
 	if err != nil {
 		client.Cmd.ReplyTo(event, "error: "+err.Error())
 
-		return
+		return ""
 	}
 
-	sendToIRC(client, event, writer.String(), appConfig.ChromaFormatter)
+	return writer.String()
 }
 
-func geminiHandler(
+func GeminiHandler(
 	irc *girc.Client,
 	appConfig *TomlConfig,
 	geminiMemory *[]*genai.Content,
@@ -760,17 +777,20 @@ func geminiHandler(
 			return
 		}
 
-		geminiRequest(appConfig, client, event, geminiMemory, prompt)
+		result := GeminiRequestProcessor(appConfig, client, event, geminiMemory, prompt)
+
+		if result != "" {
+			sendToIRC(client, event, result, appConfig.ChromaFormatter)
+		}
 	})
 }
 
-func doChatGPTRequest(
+func DoChatGPTRequest(
 	appConfig *TomlConfig,
 	client *girc.Client,
-	event girc.Event,
 	gptMemory *[]openai.ChatCompletionMessage,
 	prompt string,
-) (openai.ChatCompletionResponse, error) {
+) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
 	defer cancel()
 
@@ -780,17 +800,15 @@ func doChatGPTRequest(
 		proxyURL, err := url.Parse(appConfig.IRCProxy)
 		if err != nil {
 			cancel()
-			client.Cmd.ReplyTo(event, "error: "+err.Error())
 
-			log.Fatal(err.Error())
+			return "", err
 		}
 
 		dialer, err := proxy.FromURL(proxyURL, &net.Dialer{Timeout: time.Duration(appConfig.RequestTimeout) * time.Second})
 		if err != nil {
 			cancel()
-			client.Cmd.ReplyTo(event, "error: "+err.Error())
 
-			log.Fatal(err.Error())
+			return "", err
 		}
 
 		httpClient = http.Client{
@@ -814,27 +832,31 @@ func doChatGPTRequest(
 		Model:    appConfig.Model,
 		Messages: *gptMemory,
 	})
+	if err != nil {
 
-	return resp, err
+		return "", err
+	}
+
+	return resp.Choices[0].Message.Content, nil
 }
 
-func chatGPTRequest(
+func ChatGPTRequestProcessor(
 	appConfig *TomlConfig,
 	client *girc.Client,
 	event girc.Event,
 	gptMemory *[]openai.ChatCompletionMessage,
 	prompt string,
-) {
-	resp, err := doChatGPTRequest(appConfig, client, event, gptMemory, prompt)
+) string {
+	resp, err := DoChatGPTRequest(appConfig, client, gptMemory, prompt)
 	if err != nil {
 		client.Cmd.ReplyTo(event, "error: "+err.Error())
 
-		return
+		return ""
 	}
 
 	*gptMemory = append(*gptMemory, openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleAssistant,
-		Content: resp.Choices[0].Message.Content,
+		Content: resp,
 	})
 
 	if len(*gptMemory) > appConfig.MemoryLimit {
@@ -845,20 +867,20 @@ func chatGPTRequest(
 
 	err = quick.Highlight(
 		&writer,
-		resp.Choices[0].Message.Content,
+		resp,
 		"markdown",
 		appConfig.ChromaFormatter,
 		appConfig.ChromaStyle)
 	if err != nil {
 		client.Cmd.ReplyTo(event, "error: "+err.Error())
 
-		return
+		return ""
 	}
 
-	sendToIRC(client, event, writer.String(), appConfig.ChromaFormatter)
+	return writer.String()
 }
 
-func chatGPTHandler(
+func ChatGPTHandler(
 	irc *girc.Client,
 	appConfig *TomlConfig,
 	gptMemory *[]openai.ChatCompletionMessage,
@@ -891,7 +913,10 @@ func chatGPTHandler(
 			return
 		}
 
-		chatGPTRequest(appConfig, client, event, gptMemory, prompt)
+		result := ChatGPTRequestProcessor(appConfig, client, event, gptMemory, prompt)
+		if result != "" {
+			sendToIRC(client, event, result, appConfig.ChromaFormatter)
+		}
 	})
 }
 
@@ -1039,11 +1064,11 @@ func runIRC(appConfig TomlConfig) {
 
 	switch appConfig.Provider {
 	case "ollama":
-		ollamaHandler(irc, &appConfig, &OllamaMemory)
+		OllamaHandler(irc, &appConfig, &OllamaMemory)
 	case "gemini":
-		geminiHandler(irc, &appConfig, &GeminiMemory)
+		GeminiHandler(irc, &appConfig, &GeminiMemory)
 	case "chatgpt":
-		chatGPTHandler(irc, &appConfig, &GPTMemory)
+		ChatGPTHandler(irc, &appConfig, &GPTMemory)
 	}
 
 	go LoadAllPlugins(&appConfig, irc)
