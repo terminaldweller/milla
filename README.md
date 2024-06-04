@@ -533,6 +533,9 @@ go build
 ### Plugins and Scripting
 
 milla can be extended with plugins. The plugins are written in lua and are loaded at runtime. The plugins are loaded after an IRC connection has been made.<br/>
+milla uses [gopher-lua](https://github.com/yuin/gopher-lua) which implements a lua 5.1 VM in Go.<br/>
+This means that lua libraries that are implemented in C will not be available to gopher-lua, only pure lua libraries will be available..<br/>
+There are a few libraries written in go specifically for gopher-lua that are available to milla. Below there is a list of the current ones.<br/>
 
 An example plugin is provided under `plugins/rss.lua`.<br/>
 
