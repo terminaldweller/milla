@@ -558,7 +558,8 @@ rssfeeds:
     url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCS4FAVeYW_IaZqAbqhlvxlA"
 ```
 
-`local milla = require("milla")
+```lua
+local milla = require("milla")
 local yaml = require("yaml")
 local http = require("http")
 local xmlpath = require("xmlpath")
@@ -648,7 +649,7 @@ local function rss_feed()
     end
 end
 
-r``lua
+rss_feed()
 ```
 
 ```lua
