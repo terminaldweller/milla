@@ -294,6 +294,7 @@ ircProxy = "socks5://127.0.0.1:9050"
 llmProxy = "http://127.0.0.1:8180"
 skipTLSVerify = false
 useTLS = true
+plugins = ["./plugins/rss.lua"]
 
 [ircd.liberanet]
 ircServer = "irc.libera.chat"
@@ -509,9 +510,9 @@ secrets:
     file: ./pgadmin/pgadmin_pass
 ```
 
-The env vars `UID`and `GID`need to be defined or they can replaces by your host user's uid and gid.<br/>
+The env vars `UID` and `GID` need to be defined or they can replaces by your host user's uid and gid.<br/>
 
-As a convenience, there is a a [distroless](https://github.com/GoogleContainerTools/distroless) dockerfile, `Dockerfile_distroless` also provided.<br/>
+As a convenience, there is a [distroless](https://github.com/GoogleContainerTools/distroless) dockerfile, `Dockerfile_distroless` also provided.<br/>
 A vendored build of milla is available by first running `go mod vendor` and then using the provided dockerfile, `Dockerfile_distroless_vendored`.<br/>
 
 ### Build
@@ -609,6 +610,30 @@ end
 rss_feed()
 ```
 
+```lua
+milla.send_message(msg, target)
+```
+
+```lua
+milla.join_channel(channel)
+```
+
+```lua
+milla.part_channel(channel)
+```
+
+```lua
+milla.send_ollama_request(prompt)
+```
+
+```lua
+milla.send_gemini_request(prompt)
+```
+
+```lua
+milla.send_chatgpt_request(prompt)
+```
+
 The example rss plugin, accepts a yaml file as input, reeds the provided rss feeds once, extracts the title, author name and link to the resource, sends the feed over to the `#rssfeed` irc channel and exits.<br/>
 
 More of milla's functionality will be available through milla's lua module over time.<br/>'
@@ -640,10 +665,6 @@ Milla would not exist without the following projects:
 - [pgx](https://github.com/jackc/pgx)
 - [ollama](https://github.com/ollama/ollama)
 - [toml](https://github.com/BurntSushi/toml)
-
-## TODO
-
-- plugins support
 
 ## Similar Projects
 

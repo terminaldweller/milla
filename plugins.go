@@ -212,11 +212,11 @@ func ircPartChannelClosure(luaState *lua.LState, client *girc.Client) func(*lua.
 	}
 }
 
-func ollamaRequestClosure(luaState *lua.LState, client *girc.Client, appConfig *TomlConfig) func(*lua.LState) int {
+func ollamaRequestClosure(luaState *lua.LState, appConfig *TomlConfig) func(*lua.LState) int {
 	return func(luaState *lua.LState) int {
 		prompt := luaState.CheckString(1)
 
-		result, err := DoOllamaRequest(appConfig, client, &[]MemoryElement{}, prompt)
+		result, err := DoOllamaRequest(appConfig, &[]MemoryElement{}, prompt)
 		if err != nil {
 			log.Print(err)
 		}
@@ -227,11 +227,11 @@ func ollamaRequestClosure(luaState *lua.LState, client *girc.Client, appConfig *
 	}
 }
 
-func geminiRequestClosure(luaState *lua.LState, client *girc.Client, appConfig *TomlConfig) func(*lua.LState) int {
+func geminiRequestClosure(luaState *lua.LState, appConfig *TomlConfig) func(*lua.LState) int {
 	return func(luaState *lua.LState) int {
 		prompt := luaState.CheckString(1)
 
-		result, err := DoGeminiRequest(appConfig, client, &[]*genai.Content{}, prompt)
+		result, err := DoGeminiRequest(appConfig, &[]*genai.Content{}, prompt)
 		if err != nil {
 			log.Print(err)
 		}
@@ -242,11 +242,11 @@ func geminiRequestClosure(luaState *lua.LState, client *girc.Client, appConfig *
 	}
 }
 
-func chatGPTRequestClosure(luaState *lua.LState, client *girc.Client, appConfig *TomlConfig) func(*lua.LState) int {
+func chatGPTRequestClosure(luaState *lua.LState, appConfig *TomlConfig) func(*lua.LState) int {
 	return func(luaState *lua.LState) int {
 		prompt := luaState.CheckString(1)
 
-		result, err := DoChatGPTRequest(appConfig, client, &[]openai.ChatCompletionMessage{}, prompt)
+		result, err := DoChatGPTRequest(appConfig, &[]openai.ChatCompletionMessage{}, prompt)
 		if err != nil {
 			log.Print(err)
 		}
@@ -260,12 +260,12 @@ func chatGPTRequestClosure(luaState *lua.LState, client *girc.Client, appConfig 
 func millaModuleLoaderClosure(luaState *lua.LState, client *girc.Client, appConfig *TomlConfig) func(*lua.LState) int {
 	return func(luaState *lua.LState) int {
 		exports := map[string]lua.LGFunction{
-			"send_message":          lua.LGFunction(sendMessageClosure(luaState, client)),
-			"join_channel":          lua.LGFunction(ircJoinChannelClosure(luaState, client)),
-			"part_channel":          lua.LGFunction(ircPartChannelClosure(luaState, client)),
-			"send_ollama_request":   lua.LGFunction(ollamaRequestClosure(luaState, client, appConfig)),
-			"send_gemini_request":   lua.LGFunction(geminiRequestClosure(luaState, client, appConfig)),
-			"send_chat_gpt_request": lua.LGFunction(chatGPTRequestClosure(luaState, client, appConfig)),
+			"send_message":         lua.LGFunction(sendMessageClosure(luaState, client)),
+			"join_channel":         lua.LGFunction(ircJoinChannelClosure(luaState, client)),
+			"part_channel":         lua.LGFunction(ircPartChannelClosure(luaState, client)),
+			"send_ollama_request":  lua.LGFunction(ollamaRequestClosure(luaState, appConfig)),
+			"send_gemini_request":  lua.LGFunction(geminiRequestClosure(luaState, appConfig)),
+			"send_chatgpt_request": lua.LGFunction(chatGPTRequestClosure(luaState, appConfig)),
 		}
 		millaModule := luaState.SetFuncs(luaState.NewTable(), exports)
 

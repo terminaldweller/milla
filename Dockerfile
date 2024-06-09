@@ -1,7 +1,4 @@
 FROM golang:1.22-alpine3.20 as builder
-RUN apk update && \
-      apk upgrade && \
-      apk add go git
 WORKDIR /milla
 COPY go.sum go.mod /milla/
 RUN go mod download

@@ -481,7 +481,6 @@ func runCommand(
 
 func DoOllamaRequest(
 	appConfig *TomlConfig,
-	client *girc.Client,
 	ollamaMemory *[]MemoryElement,
 	prompt string,
 ) (string, error) {
@@ -587,7 +586,7 @@ func OllamaRequestProcessor(
 	ollamaMemory *[]MemoryElement,
 	prompt string,
 ) string {
-	response, err := DoOllamaRequest(appConfig, client, ollamaMemory, prompt)
+	response, err := DoOllamaRequest(appConfig, ollamaMemory, prompt)
 	if err != nil {
 		client.Cmd.ReplyTo(event, "error: "+err.Error())
 
@@ -661,7 +660,6 @@ func OllamaHandler(
 
 func DoGeminiRequest(
 	appConfig *TomlConfig,
-	client *girc.Client,
 	geminiMemory *[]*genai.Content,
 	prompt string,
 ) (string, error) {
@@ -700,7 +698,7 @@ func GeminiRequestProcessor(
 	geminiMemory *[]*genai.Content,
 	prompt string,
 ) string {
-	geminiResponse, err := DoGeminiRequest(appConfig, client, geminiMemory, prompt)
+	geminiResponse, err := DoGeminiRequest(appConfig, geminiMemory, prompt)
 	if err != nil {
 		client.Cmd.ReplyTo(event, "error: "+err.Error())
 
@@ -787,7 +785,6 @@ func GeminiHandler(
 
 func DoChatGPTRequest(
 	appConfig *TomlConfig,
-	client *girc.Client,
 	gptMemory *[]openai.ChatCompletionMessage,
 	prompt string,
 ) (string, error) {
@@ -847,7 +844,7 @@ func ChatGPTRequestProcessor(
 	gptMemory *[]openai.ChatCompletionMessage,
 	prompt string,
 ) string {
-	resp, err := DoChatGPTRequest(appConfig, client, gptMemory, prompt)
+	resp, err := DoChatGPTRequest(appConfig, gptMemory, prompt)
 	if err != nil {
 		client.Cmd.ReplyTo(event, "error: "+err.Error())
 
