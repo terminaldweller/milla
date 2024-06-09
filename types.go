@@ -17,9 +17,10 @@ type LogModel struct {
 }
 
 type CustomCommand struct {
-	SQL    string `toml:"sql"`
-	Limit  int    `toml:"limit"`
-	Prompt string `toml:"prompt"`
+	SQL     string   `toml:"sql"`
+	Limit   int      `toml:"limit"`
+	Context []string `toml:"context"`
+	Prompt  string   `toml:"prompt"`
 }
 
 type LuaLstates struct {

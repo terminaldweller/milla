@@ -113,6 +113,15 @@ func getTableFromChanName(channel, ircdName string) string {
 	return tableName
 }
 
+func stripColorCodes(input string) string {
+	re := regexp.MustCompile(`\x1b\[[0-9;]*m`)
+	input = re.ReplaceAllString(input, "")
+	re = regexp.MustCompile(`\x03(?:\d{1,2}(?:,\d{1,2})?)?`)
+	input = re.ReplaceAllString(input, "")
+
+	return input
+}
+
 func sanitizeLog(log string) string {
 	sanitizeLog := strings.ReplaceAll(log, "'", " ")
 
@@ -328,6 +337,18 @@ func handleCustomCommand(
 			})
 		}
 
+		for _, customContext := range customCommand.Context {
+			gptMemory = append(gptMemory, openai.ChatCompletionMessage{
+				Role:    openai.ChatMessageRoleUser,
+				Content: customContext,
+			})
+		}
+
+		var bigPrompt string
+		for _, log := range logs {
+			bigPrompt += log.Log + "\n"
+		}
+
 		result := ChatGPTRequestProcessor(appConfig, client, event, &gptMemory, customCommand.Prompt)
 		if result != "" {
 			sendToIRC(client, event, result, appConfig.ChromaFormatter)
@@ -344,6 +365,15 @@ func handleCustomCommand(
 			})
 		}
 
+		for _, customContext := range customCommand.Context {
+			geminiMemory = append(geminiMemory, &genai.Content{
+				Parts: []genai.Part{
+					genai.Text(customContext),
+				},
+				Role: "user",
+			})
+		}
+
 		result := GeminiRequestProcessor(appConfig, client, event, &geminiMemory, customCommand.Prompt)
 		if result != "" {
 			sendToIRC(client, event, result, appConfig.ChromaFormatter)
@@ -355,6 +385,13 @@ func handleCustomCommand(
 			ollamaMemory = append(ollamaMemory, MemoryElement{
 				Role:    "user",
 				Content: log.Log,
+			})
+		}
+
+		for _, customContext := range customCommand.Context {
+			ollamaMemory = append(ollamaMemory, MemoryElement{
+				Role:    "user",
+				Content: customContext,
 			})
 		}
 
@@ -996,7 +1033,7 @@ func scrapeChannel(irc *girc.Client, poolChan chan *pgxpool.Pool, appConfig Toml
 			"insert into %s (channel,log,nick) values ('%s','%s','%s')",
 			tableName,
 			sanitizeLog(event.Params[0]),
-			event.Last(),
+			stripColorCodes(event.Last()),
 			event.Source.Name,
 		)
 

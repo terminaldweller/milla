@@ -2,13 +2,7 @@
 
 Milla is an IRC bot that:
 
-- sends things over to an LLM when you ask it questions and prints the answer with optional syntax-highlighting.<br/>
-  Currently supported providers:
-
-* Ollama
-* Openai
-* Gemini
-
+- sends things over to an LLM when you ask it questions and prints the answer with optional syntax-highlighting.Currently supported providers: Ollama, Openai, Gemini <br/>
 - Milla can run more than one instance of itself
 - Each instance can connect to a different ircd, and will get the full set of configs, e.g. different proxies, different postgres instance, ...
 - You can define custom commands in the form of SQL queries to the database with the SQL query result being passed to the bot along with the given prompt and an optional limit so you don't go bankrupt(unless you are running ollama locally like the smart cookie that you are).<br/>
@@ -247,13 +241,20 @@ Custom commands let you define a command that does a SQL query to the database a
 
 ```toml
 [ircd.devinet_terra.customCommands.digest]
-sql = "select log from liberanet_milla_us_market_news;"
-limit = 10
-prompt = "give me digest of the provided news"
+sql = "select log from liberanet_milla_us_market_news order by log desc;"
+limit = 300
+context = ["you are a sentiment-analysis bot"]
+prompt= "i have provided to you news headlines in the form of previous conversations between you and me using the user role. please provide the digest of the news for me."
 [ircd.devinet_terra.customCommands.summarize]
-sql= "select log from liberanet_milla_us_market_news;"
+sql= "select log from liberanet_milla_us_market_news order by log desc;"
 limit= 300
-prompt= "given all the data, summarize the news for me"
+context = ["you are a sentiment-analysis bot"]
+prompt= "i have provided to you news headlines in the form of previous conversations between you and me using the user role. please summarize the provided news for me. provide some details."
+[ircd.devinet_terra.customCommands.canada]
+sql= "select log from liberanet_milla_us_market_news order by log desc;"
+limit= 300
+context = ["you are a canadian news anchor", "you only care about news that is relevant to canada"]
+prompt= "i have provided to you news headlines in the form of previous conversations between you and me using the user role. please summarize the provided news for me. provide some details."
 ```
 
 In the above example digest and summarize will be the names of the commands: `milla: /cmd summarize`.<br/>

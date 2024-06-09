@@ -1,5 +1,3 @@
-#!/usr/bin/env lua5.1
-
 local milla = require("milla")
 local yaml = require("yaml")
 local http = require("http")
