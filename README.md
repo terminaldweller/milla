@@ -362,6 +362,14 @@ Joins a channel: `/join #channel`
 
 Leaves a channel: `/leave #channel`
 
+#### load
+
+Load a plugin: `/load /plugins/rss.lua`
+
+#### unload
+
+Unload a plugin: `/unload /plugins/rss.lua`
+
 ## Deploy
 
 ### Docker

@@ -1,3 +1,5 @@
+period: 3600
+channel: "#rssfeed"
 rssfeeds:
   - name: "one"
     url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCaiL2GDNpLYH6Wokkk1VNcg"

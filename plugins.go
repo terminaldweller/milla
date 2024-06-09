@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"reflect"
@@ -284,6 +285,12 @@ func millaModuleLoaderClosure(luaState *lua.LState, client *girc.Client, appConf
 func RunScript(scriptPath string, client *girc.Client, appConfig *TomlConfig) {
 	luaState := lua.NewState()
 	defer luaState.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	luaState.SetContext(ctx)
+
+	appConfig.insertLState(scriptPath, luaState, cancel)
 
 	luaState.PreloadModule("milla", millaModuleLoaderClosure(luaState, client, appConfig))
 	gluasocket.Preload(luaState)

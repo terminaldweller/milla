@@ -474,6 +474,30 @@ func runCommand(
 		}
 
 		handleCustomCommand(args, client, event, appConfig)
+	case "load":
+		if !isFromAdmin(appConfig.Admins, event) {
+			break
+		}
+
+		if len(args) < 2 { //nolint: mnd,gomnd
+			client.Cmd.Reply(event, errNotEnoughArgs.Error())
+
+			break
+		}
+
+		RunScript(args[1], client, appConfig)
+	case "unload":
+		if !isFromAdmin(appConfig.Admins, event) {
+			break
+		}
+
+		if len(args) < 2 { //nolint: mnd,gomnd
+			client.Cmd.Reply(event, errNotEnoughArgs.Error())
+
+			break
+		}
+
+		appConfig.deleteLstate(args[1])
 	default:
 		client.Cmd.Reply(event, errUnknCmd.Error())
 	}

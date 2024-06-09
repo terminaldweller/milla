@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	lua "github.com/yuin/gopher-lua"
 )
 
 type LogModel struct {
@@ -18,6 +20,11 @@ type CustomCommand struct {
 	SQL    string `toml:"sql"`
 	Limit  int    `toml:"limit"`
 	Prompt string `toml:"prompt"`
+}
+
+type LuaLstates struct {
+	LuaState *lua.LState
+	Cancel   context.CancelFunc
 }
 
 type TomlConfig struct {
@@ -49,28 +56,51 @@ type TomlConfig struct {
 	WebIRCAddress       string                   `toml:"webIRCAddress"`
 	Plugins             []string                 `toml:"plugins"`
 	CustomCommands      map[string]CustomCommand `toml:"customCommands"`
-	Temp                float64                  `toml:"temp"`
-	RequestTimeout      int                      `toml:"requestTimeout"`
-	MillaReconnectDelay int                      `toml:"millaReconnectDelay"`
-	IrcPort             int                      `toml:"ircPort"`
-	KeepAlive           int                      `toml:"keepAlive"`
-	MemoryLimit         int                      `toml:"memoryLimit"`
-	PingDelay           int                      `toml:"pingDelay"`
-	PingTimeout         int                      `toml:"pingTimeout"`
-	TopP                float32                  `toml:"topP"`
-	TopK                int32                    `toml:"topK"`
-	EnableSasl          bool                     `toml:"enableSasl"`
-	SkipTLSVerify       bool                     `toml:"skipTLSVerify"`
-	UseTLS              bool                     `toml:"useTLS"`
-	DisableSTSFallback  bool                     `toml:"disableSTSFallback"`
-	AllowFlood          bool                     `toml:"allowFlood"`
-	Debug               bool                     `toml:"debug"`
-	Out                 bool                     `toml:"out"`
-	AdminOnly           bool                     `toml:"adminOnly"`
+	LuaStates           map[string]LuaLstates
+	Temp                float64 `toml:"temp"`
+	RequestTimeout      int     `toml:"requestTimeout"`
+	MillaReconnectDelay int     `toml:"millaReconnectDelay"`
+	IrcPort             int     `toml:"ircPort"`
+	KeepAlive           int     `toml:"keepAlive"`
+	MemoryLimit         int     `toml:"memoryLimit"`
+	PingDelay           int     `toml:"pingDelay"`
+	PingTimeout         int     `toml:"pingTimeout"`
+	TopP                float32 `toml:"topP"`
+	TopK                int32   `toml:"topK"`
+	EnableSasl          bool    `toml:"enableSasl"`
+	SkipTLSVerify       bool    `toml:"skipTLSVerify"`
+	UseTLS              bool    `toml:"useTLS"`
+	DisableSTSFallback  bool    `toml:"disableSTSFallback"`
+	AllowFlood          bool    `toml:"allowFlood"`
+	Debug               bool    `toml:"debug"`
+	Out                 bool    `toml:"out"`
+	AdminOnly           bool    `toml:"adminOnly"`
 	pool                *pgxpool.Pool
 	Admins              []string `toml:"admins"`
 	IrcChannels         []string `toml:"ircChannels"`
 	ScrapeChannels      []string `toml:"scrapeChannels"`
+}
+
+func (config *TomlConfig) insertLState(
+	name string,
+	luaState *lua.LState,
+	cancel context.CancelFunc,
+) {
+	if config.LuaStates == nil {
+		config.LuaStates = make(map[string]LuaLstates)
+	}
+	config.LuaStates[name] = LuaLstates{
+		LuaState: luaState,
+		Cancel:   cancel,
+	}
+}
+
+func (config *TomlConfig) deleteLstate(name string) {
+	if config.LuaStates == nil {
+		return
+	}
+	config.LuaStates[name].Cancel()
+	delete(config.LuaStates, name)
 }
 
 type AppConfig struct {
