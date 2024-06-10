@@ -5,8 +5,7 @@ local function sleep(n)
     while os.clock() - t0 <= n do end
 end
 
-local function printer()
-
+local function test_printer()
     local config = milla.toml_config.new()
     print(config:IrcServer())
     config:IrcServer("irc.libera.chat")
@@ -18,4 +17,15 @@ local function printer()
     end
 end
 
-printer()
+local function test_query()
+    local query =
+        "select log from liberanet_milla_us_market_news order by log desc;"
+    local result = milla.query_db(query)
+
+    print(result)
+
+    for _, v in ipairs(result) do print(v) end
+end
+
+-- test_printer()
+test_query()

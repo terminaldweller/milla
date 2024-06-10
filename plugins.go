@@ -9,6 +9,7 @@ import (
 	"github.com/ailncode/gluaxmlpath"
 	"github.com/cjoudrey/gluahttp"
 	"github.com/google/generative-ai-go/genai"
+	"github.com/jackc/pgx/v5"
 	"github.com/kohkimakimoto/gluayaml"
 	"github.com/lrstanley/girc"
 	openai "github.com/sashabaranov/go-openai"
@@ -258,6 +259,39 @@ func chatGPTRequestClosure(luaState *lua.LState, appConfig *TomlConfig) func(*lu
 	}
 }
 
+func dbQueryClosure(luaState *lua.LState, appConfig *TomlConfig) func(*lua.LState) int {
+	return func(luaState *lua.LState) int {
+		if appConfig.pool == nil {
+			log.Println("Database connection is not available")
+
+			return 0
+		}
+
+		query := luaState.CheckString(1)
+
+		rows, err := appConfig.pool.Query(context.Background(), query)
+		if err != nil {
+			log.Println(err.Error())
+		}
+		defer rows.Close()
+
+		logs, err := pgx.CollectRows(rows, pgx.RowToStructByName[LogModel])
+		if err != nil {
+			log.Println(err.Error())
+		}
+
+		table := luaState.CreateTable(0, len(logs))
+
+		for index, log := range logs {
+			luaState.SetTable(table, lua.LNumber(index), lua.LString(log.Log))
+		}
+
+		luaState.Push(table)
+
+		return 1
+	}
+}
+
 func millaModuleLoaderClosure(luaState *lua.LState, client *girc.Client, appConfig *TomlConfig) func(*lua.LState) int {
 	return func(luaState *lua.LState) int {
 		exports := map[string]lua.LGFunction{
@@ -267,6 +301,7 @@ func millaModuleLoaderClosure(luaState *lua.LState, client *girc.Client, appConf
 			"send_ollama_request":  lua.LGFunction(ollamaRequestClosure(luaState, appConfig)),
 			"send_gemini_request":  lua.LGFunction(geminiRequestClosure(luaState, appConfig)),
 			"send_chatgpt_request": lua.LGFunction(chatGPTRequestClosure(luaState, appConfig)),
+			"query_db":             lua.LGFunction(dbQueryClosure(luaState, appConfig)),
 		}
 		millaModule := luaState.SetFuncs(luaState.NewTable(), exports)
 

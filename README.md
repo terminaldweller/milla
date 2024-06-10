@@ -550,6 +550,8 @@ There are a few libraries written in go specifically for gopher-lua that are ava
 An example plugin is provided under `plugins/rss.lua`.<br/>
 
 ```yaml
+period: 3600
+channel: "#rssfeed"
 rssfeeds:
   - name: "one"
     url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCaiL2GDNpLYH6Wokkk1VNcg"
@@ -675,6 +677,10 @@ milla.send_gemini_request(prompt)
 
 ```lua
 milla.send_chatgpt_request(prompt)
+```
+
+```lua
+milla.query_db(query)
 ```
 
 The example rss plugin, accepts a yaml file as input, reeds the provided rss feeds once, extracts the title, author name and link to the resource, sends the feed over to the `#rssfeed` irc channel and exits.<br/>
