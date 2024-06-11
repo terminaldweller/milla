@@ -295,7 +295,8 @@ ircProxy = "socks5://127.0.0.1:9050"
 llmProxy = "http://127.0.0.1:8180"
 skipTLSVerify = false
 useTLS = true
-plugins = ["./plugins/rss.lua"]
+plugins = ["/plugins/plugin1.lua", "/plugins/plugin2.lua"]
+adminOnly = false
 
 [ircd.liberanet]
 ircServer = "irc.libera.chat"
@@ -323,14 +324,17 @@ debug = true
 out = true
 ircProxy = "socks5://127.0.0.1:9051"
 llmProxy = "http://127.0.0.1:8181"
-[ircd.liberanet.customCommands.digest]
-sql = "select log from liberanet_milla_us_market_news;"
-limit = 10
-prompt = "give me digest of the provided news"
-[ircd.liberanet.customCommands.summarize]
-sql= "select log from liberanet_milla_us_market_news;"
+adminOnly = true
+[ircd.devinet_terra.customCommands.digest]
+sql = "select log from liberanet_milla_us_market_news order by log desc;"
+limit = 300
+context = ["you are a sentiment-analysis bot"]
+prompt= "i have provided to you news headlines in the form of previous conversations between you and me using the user role. please provide the digest of the news for me."
+[ircd.devinet_terra.customCommands.summarize]
+sql= "select log from liberanet_milla_us_market_news order by log desc;"
 limit= 300
-prompt= "given all the data, summarize the news for me"
+context = ["you are a sentiment-analysis bot"]
+prompt= "i have provided to you news headlines in the form of previous conversations between you and me using the user role. please summarize the provided news for me. provide some details."
 ```
 
 ## Commands
@@ -693,6 +697,7 @@ The following libraries are loaded by milla by default:
 - [gluahttp](https://github.com/cjoudrey/gluahttp)
 - [gluayaml](https://github.com/kohkimakimoto/gluayaml)
 - [gluasocket](https://gitlab.com/megalithic-llc/gluasocket)
+- [gluare](https://github.com/yuin/gluare)
 
 ## FAQ
 

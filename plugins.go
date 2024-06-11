@@ -13,6 +13,7 @@ import (
 	"github.com/kohkimakimoto/gluayaml"
 	"github.com/lrstanley/girc"
 	openai "github.com/sashabaranov/go-openai"
+	"github.com/yuin/gluare"
 	lua "github.com/yuin/gopher-lua"
 	"gitlab.com/megalithic-llc/gluasocket"
 )
@@ -332,6 +333,7 @@ func RunScript(scriptPath string, client *girc.Client, appConfig *TomlConfig) {
 	gluaxmlpath.Preload(luaState)
 	luaState.PreloadModule("http", gluahttp.NewHttpModule(&http.Client{}).Loader)
 	luaState.PreloadModule("yaml", gluayaml.Loader)
+	luaState.PreloadModule("re", gluare.Loader)
 
 	log.Print("Running script: ", scriptPath)
 

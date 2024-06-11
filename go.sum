@@ -113,6 +113,8 @@ github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO
 github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
 github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
+github.com/yuin/gluare v0.0.0-20170607022532-d7c94f1a80ed h1:I1vcLHWU9m30rA90rMrKPu0eD3NDA4FBlkB8WMaDyUw=
+github.com/yuin/gluare v0.0.0-20170607022532-d7c94f1a80ed/go.mod h1:9w6KSdZh23UWqOywWsRLUcJUrUNjRh4Ql3z9uVgnSP4=
 github.com/yuin/gopher-lua v1.1.1 h1:kYKnWBjvbNP4XLT3+bPEwAXJx262OhaHDWDVOPjL46M=
 github.com/yuin/gopher-lua v1.1.1/go.mod h1:GBR0iDaNXjAgGg9zfCvksxSRnQx76gclCIb7kdAd1Pw=
 gitlab.com/megalithic-llc/gluasocket v0.3.1 h1:CtsSTZa3G5WnMbhZ3TgvpLwpVlQv6KjO2mqxNOGrhY4=

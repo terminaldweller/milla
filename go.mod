@@ -12,6 +12,7 @@ require (
 	github.com/kohkimakimoto/gluayaml v0.0.0-20160815032708-6fe413d49d73
 	github.com/lrstanley/girc v0.0.0-20240125042120-9add3166e52e
 	github.com/sashabaranov/go-openai v1.19.3
+	github.com/yuin/gluare v0.0.0-20170607022532-d7c94f1a80ed
 	github.com/yuin/gopher-lua v1.1.1
 	gitlab.com/megalithic-llc/gluasocket v0.3.1
 	golang.org/x/net v0.24.0
