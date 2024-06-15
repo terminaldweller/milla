@@ -28,6 +28,13 @@ type LuaLstates struct {
 	Cancel   context.CancelFunc
 }
 
+type WatchList struct {
+	AlertChannel string   `toml:"alertChannel"`
+	WatchList    []string `toml:"watchList"`
+	WatchFiles   []string `toml:"watchFiles"`
+	Words        []string `toml:"watchWords"`
+}
+
 type TomlConfig struct {
 	IrcServer           string                   `toml:"ircServer"`
 	IrcNick             string                   `toml:"ircNick"`
@@ -57,6 +64,7 @@ type TomlConfig struct {
 	WebIRCAddress       string                   `toml:"webIRCAddress"`
 	Plugins             []string                 `toml:"plugins"`
 	CustomCommands      map[string]CustomCommand `toml:"customCommands"`
+	WatchLists          map[string]WatchList     `toml:"watchList"`
 	LuaStates           map[string]LuaLstates
 	Temp                float64 `toml:"temp"`
 	RequestTimeout      int     `toml:"requestTimeout"`

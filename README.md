@@ -263,6 +263,17 @@ The `limit` parameter limits the number of SQL queries that are used to generate
 A `limit` value of 0 disables the limit on the amount of rows that are passed to milla.<br/>
 NOTE: since each milla instance can have its own database, all instances might not necessarily have access to all the data milla is gathering. If you use the same database for all the instances, all instances will have access to all the gathered data.<br/>
 
+## Watchlist
+
+Watchlists allow you to specify a list of channels to watch. The watched values are given in a list of files, each line of the file specifying a value to watch for. Finally a value is given for the alertchannel where the bot will mirror the message that triggered a match.<br/>
+
+```toml
+[ircd.devinet_terra.watchlist.security]
+watchList = ["#securityfeeds"]
+watchFiles = ["/watchfiles/voidbox.list"]
+alertChannel = "#milla_alerts"
+```
+
 ### Example Config File
 
 ```toml
@@ -297,6 +308,10 @@ skipTLSVerify = false
 useTLS = true
 plugins = ["/plugins/plugin1.lua", "/plugins/plugin2.lua"]
 adminOnly = false
+[ircd.devinet.watchlist.security]
+watchList = ["#securityfeeds"]
+watchFiles = ["/watchfiles/voidbox.list"]
+alertChannel = "#milla_alerts"
 
 [ircd.liberanet]
 ircServer = "irc.libera.chat"

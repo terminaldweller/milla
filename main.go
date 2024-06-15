@@ -8,6 +8,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"index/suffixarray"
 	"log"
 	"net"
 	"net/http"
@@ -1044,6 +1045,50 @@ func scrapeChannel(irc *girc.Client, poolChan chan *pgxpool.Pool, appConfig Toml
 	})
 }
 
+func populateWatchListWords(appConfig *TomlConfig) {
+	for watchlistName, watchlist := range appConfig.WatchLists {
+		for _, filepath := range watchlist.WatchFiles {
+			filebytes, err := os.ReadFile(filepath)
+			if err != nil {
+				log.Println(err.Error())
+
+				continue
+			}
+
+			filestring := string(filebytes)
+
+			words := strings.Split(filestring, "\n")
+
+			watchlist.Words = append(watchlist.Words, words...)
+			appConfig.WatchLists[watchlistName] = watchlist
+		}
+	}
+
+	log.Print(appConfig.WatchLists["security"].Words)
+}
+
+func WatchListHandler(irc *girc.Client, appConfig TomlConfig) {
+	irc.Handlers.AddBg(girc.PRIVMSG, func(_ *girc.Client, event girc.Event) {
+		sarray := suffixarray.New([]byte(event.Last()))
+
+		for watchname, watchlist := range appConfig.WatchLists {
+			for _, channel := range watchlist.WatchList {
+				if channel == event.Params[0] {
+					for _, word := range watchlist.Words {
+						indexes := sarray.Lookup([]byte(word), -1)
+						if len(indexes) > 0 {
+							irc.Cmd.Message(watchlist.AlertChannel, fmt.Sprintf("%s: %s", watchname, event.Last()))
+							log.Printf("%s: %s", watchname, event.Last())
+
+							break
+						}
+					}
+				}
+			}
+		}
+	})
+}
+
 func runIRC(appConfig TomlConfig) {
 	var OllamaMemory []MemoryElement
 
@@ -1146,6 +1191,23 @@ func runIRC(appConfig TomlConfig) {
 		})
 
 		go scrapeChannel(irc, poolChan, appConfig)
+	}
+
+	if len(appConfig.WatchLists) > 0 {
+		irc.Handlers.AddBg(girc.CONNECTED, func(client *girc.Client, _ girc.Event) {
+			for _, watchlist := range appConfig.WatchLists {
+				log.Print("joining ", watchlist.AlertChannel)
+				client.Cmd.Join(watchlist.AlertChannel)
+
+				for _, channel := range watchlist.WatchList {
+					client.Cmd.Join(channel)
+				}
+			}
+		})
+
+		populateWatchListWords(&appConfig)
+
+		go WatchListHandler(irc, appConfig)
 	}
 
 	for {
