@@ -10,6 +10,7 @@ require (
 	github.com/google/generative-ai-go v0.11.2
 	github.com/jackc/pgx/v5 v5.5.5
 	github.com/kohkimakimoto/gluayaml v0.0.0-20160815032708-6fe413d49d73
+	github.com/layeh/gopher-json v0.0.0-20201124131017-552bb3c4c3bf
 	github.com/lrstanley/girc v0.0.0-20240125042120-9add3166e52e
 	github.com/sashabaranov/go-openai v1.19.3
 	github.com/yuin/gluare v0.0.0-20170607022532-d7c94f1a80ed

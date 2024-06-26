@@ -713,6 +713,7 @@ The following libraries are loaded by milla by default:
 - [gluayaml](https://github.com/kohkimakimoto/gluayaml)
 - [gluasocket](https://gitlab.com/megalithic-llc/gluasocket)
 - [gluare](https://github.com/yuin/gluare)
+- [gopher-json](https://github.com/layeh/gopher-json)
 
 ## FAQ
 

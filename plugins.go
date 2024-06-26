@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"net/url"
+	"os"
 	"reflect"
 
 	"github.com/ailncode/gluaxmlpath"
@@ -11,6 +13,7 @@ import (
 	"github.com/google/generative-ai-go/genai"
 	"github.com/jackc/pgx/v5"
 	"github.com/kohkimakimoto/gluayaml"
+	gopherjson "github.com/layeh/gopher-json"
 	"github.com/lrstanley/girc"
 	openai "github.com/sashabaranov/go-openai"
 	"github.com/yuin/gluare"
@@ -331,9 +334,34 @@ func RunScript(scriptPath string, client *girc.Client, appConfig *TomlConfig) {
 	luaState.PreloadModule("milla", millaModuleLoaderClosure(luaState, client, appConfig))
 	gluasocket.Preload(luaState)
 	gluaxmlpath.Preload(luaState)
-	luaState.PreloadModule("http", gluahttp.NewHttpModule(&http.Client{}).Loader)
 	luaState.PreloadModule("yaml", gluayaml.Loader)
 	luaState.PreloadModule("re", gluare.Loader)
+	luaState.PreloadModule("json", gopherjson.Loader)
+
+	var proxyString string
+	if os.Getenv("ALL_PROXY") != "" {
+		proxyString = os.Getenv("ALL_PROXY")
+	} else if os.Getenv("HTTPS_PROXY") != "" {
+		proxyString = os.Getenv("HTTPS_PROXY")
+	} else if os.Getenv("HTTP_PROXY") != "" {
+		proxyString = os.Getenv("HTTP_PROXY")
+	} else if os.Getenv("https_proxy") != "" {
+		proxyString = os.Getenv("https_proxy")
+	} else if os.Getenv("http_proxy") != "" {
+		proxyString = os.Getenv("http_proxy")
+	}
+
+	proxyTransport := &http.Transport{}
+
+	if proxyString != "" {
+		proxyURL, err := url.Parse(proxyString)
+		if err != nil {
+			log.Print(err)
+		}
+		proxyTransport.Proxy = http.ProxyURL(proxyURL)
+	}
+
+	luaState.PreloadModule("http", gluahttp.NewHttpModule(&http.Client{Transport: proxyTransport}).Loader)
 
 	log.Print("Running script: ", scriptPath)
 
