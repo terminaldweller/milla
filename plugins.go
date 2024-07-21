@@ -198,6 +198,27 @@ func sendMessageClosure(luaState *lua.LState, client *girc.Client) func(*lua.LSt
 	}
 }
 
+func registerLuaCommand(luaState *lua.LState, appConfig *TomlConfig) func(*lua.LState) int {
+	return func(luaState *lua.LState) int {
+		path := luaState.CheckString(1)
+		commandName := luaState.CheckString(2) //nolint: mnd,gomnd
+		funcName := luaState.CheckString(3)    //nolint: mnd,gomnd
+
+		_, ok := appConfig.LuaCommands[commandName]
+		if ok {
+			log.Print("command already registered: ", commandName)
+
+			return 0
+		}
+
+		appConfig.insertLuaCommand(commandName, path, funcName)
+
+		log.Print("registered command: ", commandName, path, funcName)
+
+		return 0
+	}
+}
+
 func ircJoinChannelClosure(luaState *lua.LState, client *girc.Client) func(*lua.LState) int {
 	return func(luaState *lua.LState) int {
 		channel := luaState.CheckString(1)
@@ -306,6 +327,7 @@ func millaModuleLoaderClosure(luaState *lua.LState, client *girc.Client, appConf
 			"send_gemini_request":  lua.LGFunction(geminiRequestClosure(luaState, appConfig)),
 			"send_chatgpt_request": lua.LGFunction(chatGPTRequestClosure(luaState, appConfig)),
 			"query_db":             lua.LGFunction(dbQueryClosure(luaState, appConfig)),
+			"register_cmd":         lua.LGFunction(registerLuaCommand(luaState, appConfig)),
 		}
 		millaModule := luaState.SetFuncs(luaState.NewTable(), exports)
 
@@ -377,4 +399,81 @@ func LoadAllPlugins(appConfig *TomlConfig, client *girc.Client) {
 
 		go RunScript(scriptPath, client, appConfig)
 	}
+}
+
+func RunLuaFunc(
+	cmd, args string,
+	client *girc.Client,
+	appConfig *TomlConfig,
+) string {
+	luaState := lua.NewState()
+	defer luaState.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	luaState.SetContext(ctx)
+
+	scriptPath := appConfig.LuaCommands[cmd].Path
+
+	appConfig.insertLState(scriptPath, luaState, cancel)
+
+	luaState.PreloadModule("milla", millaModuleLoaderClosure(luaState, client, appConfig))
+	gluasocket.Preload(luaState)
+	gluaxmlpath.Preload(luaState)
+	luaState.PreloadModule("yaml", gluayaml.Loader)
+	luaState.PreloadModule("re", gluare.Loader)
+	luaState.PreloadModule("json", gopherjson.Loader)
+
+	var proxyString string
+	switch proxyString {
+	case os.Getenv("ALL_PROXY"):
+		proxyString = os.Getenv("ALL_PROXY")
+	case os.Getenv("HTTPS_PROXY"):
+		proxyString = os.Getenv("HTTPS_PROXY")
+	case os.Getenv("HTTP_PROXY"):
+		proxyString = os.Getenv("HTTP_PROXY")
+	case os.Getenv("https_proxy"):
+		proxyString = os.Getenv("https_proxy")
+	case os.Getenv("http_proxy"):
+		proxyString = os.Getenv("http_proxy")
+	default:
+	}
+
+	proxyTransport := &http.Transport{}
+
+	if proxyString != "" {
+		proxyURL, err := url.Parse(proxyString)
+		if err != nil {
+			log.Print(err)
+		}
+		proxyTransport.Proxy = http.ProxyURL(proxyURL)
+	}
+
+	luaState.PreloadModule("http", gluahttp.NewHttpModule(&http.Client{Transport: proxyTransport}).Loader)
+
+	log.Print("Running lua command script: ", scriptPath)
+
+	if err := luaState.DoFile(scriptPath); err != nil {
+		log.Print(err)
+
+		return ""
+	}
+
+	funcLValue := lua.P{
+		Fn:      luaState.GetGlobal(appConfig.LuaCommands[cmd].FuncName),
+		NRet:    1,
+		Protect: true,
+	}
+
+	if err := luaState.CallByParam(funcLValue, lua.LString(args)); err != nil {
+		log.Print("failed running lua command ...")
+		log.Print(err)
+
+		return ""
+	}
+
+	result := luaState.Get(-1)
+	luaState.Pop(1)
+
+	return result.String()
 }

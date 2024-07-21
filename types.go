@@ -35,6 +35,11 @@ type WatchList struct {
 	Words        []string `toml:"watchWords"`
 }
 
+type LuaCommand struct {
+	Path     string
+	FuncName string
+}
+
 type TomlConfig struct {
 	IrcServer           string                   `toml:"ircServer"`
 	IrcNick             string                   `toml:"ircNick"`
@@ -66,6 +71,7 @@ type TomlConfig struct {
 	CustomCommands      map[string]CustomCommand `toml:"customCommands"`
 	WatchLists          map[string]WatchList     `toml:"watchList"`
 	LuaStates           map[string]LuaLstates
+	LuaCommands         map[string]LuaCommand
 	Temp                float64 `toml:"temp"`
 	RequestTimeout      int     `toml:"requestTimeout"`
 	MillaReconnectDelay int     `toml:"millaReconnectDelay"`
@@ -110,6 +116,22 @@ func (config *TomlConfig) deleteLstate(name string) {
 	}
 	config.LuaStates[name].Cancel()
 	delete(config.LuaStates, name)
+}
+
+func (config *TomlConfig) insertLuaCommand(
+	cmd, path, name string,
+) {
+	if config.LuaCommands == nil {
+		config.LuaCommands = make(map[string]LuaCommand)
+	}
+	config.LuaCommands[cmd] = LuaCommand{Path: path, FuncName: name}
+}
+
+func (config *TomlConfig) deleteLuaCommand(name string) {
+	if config.LuaCommands == nil {
+		return
+	}
+	delete(config.LuaCommands, name)
 }
 
 type AppConfig struct {

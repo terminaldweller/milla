@@ -702,6 +702,53 @@ milla.send_chatgpt_request(prompt)
 milla.query_db(query)
 ```
 
+```lua
+milla.register_cmd(script_path, cmd_name, function_name)
+```
+
+Using `register_cmd` we can register a command that will be available to run like the built-in and customs commands.<br/>
+Here's an example of how to use it:<br/>
+
+```lua
+local milla = require("milla")
+local os = require("os")
+local json = require("json")
+
+-- setting the proxy value before loading the http module
+-- this way, only this script will be using this proxy
+os.setenv("ALL_PROXY", "socks5://172.17.0.1:9057")
+
+local http = require("http")
+
+-- this function should be global
+-- one string arg that holds all args
+-- should only return one string value
+function milla_get_ip(arg)
+    local ip = arg
+    local response, err = http.request("GET", "http://ip-api.com/json?" .. ip)
+    if err ~= nil then print(err) end
+
+    local json_response, err = json.decode(response.body)
+    if err ~= nil then print(err) end
+    for k, v in pairs(json_response) do print(k, v) end
+
+    local result = ""
+    for key, value in pairs(json_response) do
+        result = result .. key .. ": " .. value .. " -- "
+    end
+
+    return result
+end
+
+milla.register_cmd("/plugins/ip.lua", "ip", "milla_get_ip")
+```
+
+This will allow us to do:<br/>
+
+```
+/terra: /ip 1.1.1.1
+```
+
 The example rss plugin, accepts a yaml file as input, reeds the provided rss feeds once, extracts the title, author name and link to the resource, sends the feed over to the `#rssfeed` irc channel and exits.<br/>
 
 More of milla's functionality will be available through milla's lua module over time.<br/>'

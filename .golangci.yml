@@ -21,3 +21,9 @@ linters-settings:
         - github.com/jackc/pgx/v5/pgxpool
         - github.com/jackc/pgx/v5/pgtype
         - github.com/yuin/gopher-lua
+        - github.com/ailncode/gluaxmlpath
+        - github.com/cjoudrey/gluahttp
+        - github.com/kohkimakimoto/gluayaml
+        - github.com/yuin/gluare
+        - gitlab.com/megalithic-llc/gluasocket
+        - github.com/layeh/gopher-json

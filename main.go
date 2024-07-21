@@ -220,6 +220,8 @@ func getHelpString() string {
 	helpString += "cmd - run a custom command defined in the customcommands file\n"
 	helpString += "getall - returns all config options with their value\n"
 	helpString += "memstats - returns the memory status currently being used\n"
+	helpString += "load - loads a lua script\n"
+	helpString += "unload - unloads a lua script\n"
 
 	return helpString
 }
@@ -535,9 +537,25 @@ func runCommand(
 			break
 		}
 
+		for key, value := range appConfig.LuaCommands {
+			if value.Path == args[1] {
+				appConfig.deleteLuaCommand(key)
+
+				break
+			}
+		}
+
 		appConfig.deleteLstate(args[1])
 	default:
-		client.Cmd.Reply(event, errUnknCmd.Error())
+		_, ok := appConfig.LuaCommands[args[0]]
+		if !ok {
+			client.Cmd.Reply(event, errUnknCmd.Error())
+
+			break
+		}
+
+		result := RunLuaFunc(args[0], args[1], client, appConfig)
+		client.Cmd.Reply(event, result)
 	}
 }
 
