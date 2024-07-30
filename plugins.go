@@ -197,7 +197,6 @@ func sendMessageClosure(luaState *lua.LState, client *girc.Client) func(*lua.LSt
 		return 0
 	}
 }
-
 func registerLuaCommand(luaState *lua.LState, appConfig *TomlConfig) func(*lua.LState) int {
 	return func(luaState *lua.LState) int {
 		path := luaState.CheckString(1)
@@ -317,6 +316,15 @@ func dbQueryClosure(luaState *lua.LState, appConfig *TomlConfig) func(*lua.LStat
 	}
 }
 
+func urlEncode(luaState *lua.LState) func(*lua.LState) int {
+	return func(luaState *lua.LState) int {
+		URL := luaState.CheckString(1)
+		escapedURL := url.QueryEscape(URL)
+		luaState.Push(lua.LString(escapedURL))
+		return 1
+	}
+}
+
 func millaModuleLoaderClosure(luaState *lua.LState, client *girc.Client, appConfig *TomlConfig) func(*lua.LState) int {
 	return func(luaState *lua.LState) int {
 		exports := map[string]lua.LGFunction{
@@ -328,6 +336,7 @@ func millaModuleLoaderClosure(luaState *lua.LState, client *girc.Client, appConf
 			"send_chatgpt_request": lua.LGFunction(chatGPTRequestClosure(luaState, appConfig)),
 			"query_db":             lua.LGFunction(dbQueryClosure(luaState, appConfig)),
 			"register_cmd":         lua.LGFunction(registerLuaCommand(luaState, appConfig)),
+			"url_encode":           lua.LGFunction(urlEncode(luaState)),
 		}
 		millaModule := luaState.SetFuncs(luaState.NewTable(), exports)
 
@@ -425,19 +434,19 @@ func RunLuaFunc(
 	luaState.PreloadModule("json", gopherjson.Loader)
 
 	var proxyString string
-	switch proxyString {
-	case os.Getenv("ALL_PROXY"):
+	if os.Getenv("ALL_PROXY") != "" {
 		proxyString = os.Getenv("ALL_PROXY")
-	case os.Getenv("HTTPS_PROXY"):
+	} else if os.Getenv("HTTPS_PROXY") != "" {
 		proxyString = os.Getenv("HTTPS_PROXY")
-	case os.Getenv("HTTP_PROXY"):
+	} else if os.Getenv("HTTP_PROXY") != "" {
 		proxyString = os.Getenv("HTTP_PROXY")
-	case os.Getenv("https_proxy"):
+	} else if os.Getenv("https_proxy") != "" {
 		proxyString = os.Getenv("https_proxy")
-	case os.Getenv("http_proxy"):
+	} else if os.Getenv("http_proxy") != "" {
 		proxyString = os.Getenv("http_proxy")
-	default:
 	}
+
+	log.Print("set proxy env to:", proxyString)
 
 	proxyTransport := &http.Transport{}
 
@@ -465,6 +474,8 @@ func RunLuaFunc(
 		Protect: true,
 	}
 
+	log.Print(cmd)
+	log.Print(args)
 	if err := luaState.CallByParam(funcLValue, lua.LString(args)); err != nil {
 		log.Print("failed running lua command ...")
 		log.Print(err)

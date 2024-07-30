@@ -272,6 +272,9 @@ Watchlists allow you to specify a list of channels to watch. The watched values 
 watchList = ["#securityfeeds"]
 watchFiles = ["/watchfiles/voidbox.list"]
 alertChannel = "#milla_alerts"
+eventTypes = ["PRIVMSG"]
+fgColor = 0
+bgColor = 28
 ```
 
 ### Example Config File
@@ -706,6 +709,10 @@ milla.query_db(query)
 milla.register_cmd(script_path, cmd_name, function_name)
 ```
 
+```lua
+milla.url_encode(str)
+```
+
 Using `register_cmd` we can register a command that will be available to run like the built-in and customs commands.<br/>
 Here's an example of how to use it:<br/>
 
@@ -725,7 +732,7 @@ local http = require("http")
 -- should only return one string value
 function milla_get_ip(arg)
     local ip = arg
-    local response, err = http.request("GET", "http://ip-api.com/json?" .. ip)
+    local response, err = http.request("GET", "http://ip-api.com/json/" .. ip)
     if err ~= nil then print(err) end
 
     local json_response, err = json.decode(response.body)
@@ -746,7 +753,7 @@ milla.register_cmd("/plugins/ip.lua", "ip", "milla_get_ip")
 This will allow us to do:<br/>
 
 ```
-/terra: /ip 1.1.1.1
+terra: /ip 1.1.1.1
 ```
 
 The example rss plugin, accepts a yaml file as input, reeds the provided rss feeds once, extracts the title, author name and link to the resource, sends the feed over to the `#rssfeed` irc channel and exits.<br/>

@@ -47,7 +47,6 @@ local function get_rss_feed(config)
         end
 
         path, err = xmlpath.compile("//entry/author/name")
-        -- local path, err = xmlpath.compile("//entry/title")
         if err ~= nil then
             milla.send_message(err, "")
             goto continue
@@ -58,7 +57,6 @@ local function get_rss_feed(config)
         end
 
         path, err = xmlpath.compile("//entry/author/uri")
-        -- local path, err = xmlpath.compile("//entry/title")
         if err ~= nil then
             milla.send_message(err, "")
             goto continue

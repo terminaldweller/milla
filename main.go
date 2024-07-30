@@ -554,7 +554,12 @@ func runCommand(
 			break
 		}
 
-		result := RunLuaFunc(args[0], args[1], client, appConfig)
+		luaArgs := strings.TrimPrefix(event.Last(), appConfig.IrcNick+": ")
+		luaArgs = strings.TrimSpace(luaArgs)
+		luaArgs = strings.TrimPrefix(luaArgs, "/")
+		luaArgs = strings.TrimPrefix(luaArgs, args[0])
+
+		result := RunLuaFunc(args[0], luaArgs, client, appConfig)
 		client.Cmd.Reply(event, result)
 	}
 }
@@ -637,11 +642,6 @@ func DoOllamaRequest(
 	response, err := httpClient.Do(request)
 
 	if err != nil {
-		return "", err
-	}
-
-	if err != nil {
-
 		return "", err
 	}
 
@@ -1086,17 +1086,50 @@ func populateWatchListWords(appConfig *TomlConfig) {
 }
 
 func WatchListHandler(irc *girc.Client, appConfig TomlConfig) {
-	irc.Handlers.AddBg(girc.PRIVMSG, func(_ *girc.Client, event girc.Event) {
+	irc.Handlers.AddBg(girc.ALL_EVENTS, func(_ *girc.Client, event girc.Event) {
+		var isRightEventType bool
+
 		sarray := suffixarray.New([]byte(event.Last()))
+
+		if len(event.Params) == 0 {
+			return
+		}
 
 		for watchname, watchlist := range appConfig.WatchLists {
 			for _, channel := range watchlist.WatchList {
+				isRightEventType = false
+
 				if channel == event.Params[0] {
+
+					for _, eventType := range watchlist.EventTypes {
+						if eventType == event.Command {
+							isRightEventType = true
+
+							break
+						}
+					}
+
+					if !isRightEventType {
+						continue
+					}
+
 					for _, word := range watchlist.Words {
-						indexes := sarray.Lookup([]byte(word), -1)
+						indexes := sarray.Lookup([]byte(" "+word+" "), 1)
 						if len(indexes) > 0 {
-							irc.Cmd.Message(watchlist.AlertChannel, fmt.Sprintf("%s: %s", watchname, event.Last()))
-							log.Printf("%s: %s", watchname, event.Last())
+							nextWhitespaceIndex := strings.Index(event.Last()[indexes[0]+1:], " ")
+
+							rewrittenMessage :=
+								event.Last()[:indexes[0]+1] +
+									fmt.Sprintf("\x1b[48;5;%dm", watchlist.BGColor) +
+									fmt.Sprintf("\x1b[38;5;%dm", watchlist.FGColor) +
+									event.Last()[indexes[0]+1:indexes[0]+1+nextWhitespaceIndex] +
+									"\x1b[0m" + event.Last()[indexes[0]+1+nextWhitespaceIndex:]
+
+							irc.Cmd.Message(
+								watchlist.AlertChannel,
+								fmt.Sprintf("%s: %s", watchname, rewrittenMessage))
+
+							log.Printf("matched from watchlist -- %s: %s", watchname, event.Last())
 
 							break
 						}

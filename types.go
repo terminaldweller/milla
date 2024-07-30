@@ -33,6 +33,9 @@ type WatchList struct {
 	WatchList    []string `toml:"watchList"`
 	WatchFiles   []string `toml:"watchFiles"`
 	Words        []string `toml:"watchWords"`
+	EventTypes   []string `toml:"eventTypes"`
+	FGColor      int      `toml:"fgColor"`
+	BGColor      int      `toml:"bgColor"`
 }
 
 type LuaCommand struct {
@@ -114,7 +117,10 @@ func (config *TomlConfig) deleteLstate(name string) {
 	if config.LuaStates == nil {
 		return
 	}
-	config.LuaStates[name].Cancel()
+
+	if config.LuaStates[name].Cancel != nil {
+		config.LuaStates[name].Cancel()
+	}
 	delete(config.LuaStates, name)
 }
 
