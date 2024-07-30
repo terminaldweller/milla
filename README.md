@@ -677,6 +677,8 @@ end
 rss_feed()
 ```
 
+The example rss plugin, accepts a yaml file as input, reeds the provided rss feeds once, extracts the title, author name and link to the resource, sends the feed over to the `#rssfeed` irc channel and exits.<br/>
+
 ```lua
 milla.send_message(msg, target)
 ```
@@ -752,13 +754,33 @@ milla.register_cmd("/plugins/ip.lua", "ip", "milla_get_ip")
 
 This will allow us to do:<br/>
 
-```
+```txt
 terra: /ip 1.1.1.1
 ```
 
-The example rss plugin, accepts a yaml file as input, reeds the provided rss feeds once, extracts the title, author name and link to the resource, sends the feed over to the `#rssfeed` irc channel and exits.<br/>
+And get this in response:<br/>
 
-More of milla's functionality will be available through milla's lua module over time.<br/>'
+```txt
+isp: Cloudflare, Inc -- query: 1.1.1.1 -- status: success -- regionName: Queensland -- lat: -27.4766 -- timezone: Australia/Brisbane -- region: QLD -- lon: 153.0166 -- country: Australia -- countryCode: AU -- city: South Brisbane --ip: 4101 -- org: APNIC and Cloudflare DNS Resolver project -- as: AS13335 Cloudflare, Inc. --
+```
+
+### NOTES
+
+- Each lua plugin gets its own lua state and will run in a goroutine.<br/>
+- Lua plugins will not go through a proxy if they are not instructed to do so. If you are using the provided http module, you can set the proxy value before loading the http module as provided in the examples under `plugins`. The module will read and set the following environment variables in the order given:
+  - `ALL_PROXY`
+  - `HTTPS_PROXY`
+  - `HTTP_PROXY`
+  - `https_proxy`
+  - `http_proxy`
+
+  `http` and `socks5` proxies are supported. unfortunately, the `socks5h` proxy is not supported.<br/>
+
+```sh
+ALL_PROXY=socks5://172.17.0.1:9050
+```
+
+More of milla's functionality will be available through milla's lua module over time.<br/>
 
 The following libraries are loaded by milla by default:
 

@@ -14,6 +14,8 @@ function milla_get_ip(arg)
 
     local url = "http://ip-api.com/json/" .. arg
 
+    print("Requesting: " .. url)
+
     local response, err = http.request("GET", url)
     if err ~= nil then print(err) end
 

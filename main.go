@@ -558,6 +558,7 @@ func runCommand(
 		luaArgs = strings.TrimSpace(luaArgs)
 		luaArgs = strings.TrimPrefix(luaArgs, "/")
 		luaArgs = strings.TrimPrefix(luaArgs, args[0])
+		luaArgs = strings.TrimSpace(luaArgs)
 
 		result := RunLuaFunc(args[0], luaArgs, client, appConfig)
 		client.Cmd.Reply(event, result)
