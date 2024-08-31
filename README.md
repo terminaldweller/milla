@@ -175,23 +175,27 @@ ircChannels = ["#channel1", "#channel2"]
 
 Please note that the bot does not have to join a channel to be usable. One can simply query the bot directly as well.<br/>
 
-### databaseUser
+#### databaseUser
 
 Name of the database user.
 
-### databasePassword
+#### databasePassword
 
 Password for the database user.
 
-### databaseAddress
+#### databaseAddress
 
 Address of the database.
 
-### databaseName
+#### databaseName
 
 Name of the database.
 
-### ircProxy
+#### scrapeChannels
+
+List of channels that the bot will scrape into a database table. You can later on use these databases for the custom commands.<br/>
+
+#### ircProxy
 
 Determines which proxy to use to connect to the IRC network:
 
@@ -199,7 +203,7 @@ Determines which proxy to use to connect to the IRC network:
 ircProxy = "socks5://127.0.0.1:9050"
 ```
 
-### llmProxy
+#### llmProxy
 
 Determines which proxy to use to connect to the LLM endpoint:
 
@@ -207,29 +211,37 @@ Determines which proxy to use to connect to the LLM endpoint:
 llmProxy = "socks5://127.0.0.1:9050"
 ```
 
-### ircdName
+#### ircdName
 
 Name of the milla instance, must be unique across all instances.
 
-### adminOnly
+#### adminOnly
 
 Milla will only answer if the nick is in the admin list.
 
-### webIRCGateway
+#### webIRCGateway
 
 webirc gateway to use.
 
-### webIRCHostname
+#### webIRCHostname
 
 webirc hostname to use.
 
-### webIRCPassword
+#### webIRCPassword
 
 webirc password to use.
 
-### webIRCAddress
+#### webIRCAddress
 
 webirc address to use.
+
+#### rssFile
+
+The file that contains the rss feeeds.
+
+#### channel
+
+The channel to send the rss feeds to.
 
 ### plugins
 
@@ -277,6 +289,32 @@ fgColor = 0
 bgColor = 28
 ```
 
+## RSS
+
+The rss file is self-explanatory. Here's an example:
+
+```json
+{
+  "feeds": [
+    {
+      "name": "one",
+      "url": "http://feeds.feedburner.com/crunchyroll/rss",
+      "proxy": "socks5://172.17.0.1:9007",
+      "userAgent": "Mozilla/5.0 (X11; U; Linux i686; pl; rv:1.8.1.1) Gecko/20061204 Firefox/2.0.0.1 (Ubuntu-edgy)",
+      "timeout": 10
+    },
+    {
+      "name": "two",
+      "url": "http://feeds.feedburner.com/crunchyroll/rss/anime",
+      "proxy": "socks5://172.17.0.1:9007",
+      "userAgent": "Mozilla/5.0 (X11; U; Linux i686; pl; rv:1.8.1.1) Gecko/20061204 Firefox/2.0.0.1 (Ubuntu-edgy)",
+      "timeout": 10
+    }
+  ],
+  "period": 3600
+}
+```
+
 ### Example Config File
 
 ```toml
@@ -311,10 +349,24 @@ skipTLSVerify = false
 useTLS = true
 plugins = ["/plugins/plugin1.lua", "/plugins/plugin2.lua"]
 adminOnly = false
+plugins = ["/plugins/ip.lua", "/plugins/urban.lua", "/plugins/remind.lua"]
 [ircd.devinet.watchlist.security]
 watchList = ["#securityfeeds"]
 watchFiles = ["/watchfiles/voidbox.list"]
 alertChannel = "#milla_alerts"
+[ircd.devinet.rss.manga]
+rssFile = "/rssfeeds/manga.json"
+channel = "#manga"
+[ircd.devinet.rss.anime]
+rssFile = "/rssfeeds/anime.json"
+channel = "#anime"
+[ircd.devinet.watchlist.security]
+watchList = ["#securityfeeds"]
+watchFiles = ["/watchfiles/voidbox.list"]
+alertChannel = "#milla_alerts"
+eventTypes = ["PRIVMSG"]
+fgColor = 0
+bgColor = 28
 
 [ircd.liberanet]
 ircServer = "irc.libera.chat"
@@ -343,12 +395,12 @@ out = true
 ircProxy = "socks5://127.0.0.1:9051"
 llmProxy = "http://127.0.0.1:8181"
 adminOnly = true
-[ircd.devinet_terra.customCommands.digest]
+[ircd.liberanet.customCommands.digest]
 sql = "select log from liberanet_milla_us_market_news order by log desc;"
 limit = 300
 context = ["you are a sentiment-analysis bot"]
 prompt= "i have provided to you news headlines in the form of previous conversations between you and me using the user role. please provide the digest of the news for me."
-[ircd.devinet_terra.customCommands.summarize]
+[ircd.liberanet.customCommands.summarize]
 sql= "select log from liberanet_milla_us_market_news order by log desc;"
 limit= 300
 context = ["you are a sentiment-analysis bot"]
@@ -392,6 +444,14 @@ Load a plugin: `/load /plugins/rss.lua`
 #### unload
 
 Unload a plugin: `/unload /plugins/rss.lua`
+
+#### remind
+
+Pings the user after the given amount in seconds: `/remind 1200`
+
+#### roll
+
+Rolls a number between 1 and 6 if no arguments are given. With one argument it rolls a number between 1 and the given number. With two arguments it rolls a number between the two numbers: `/rool 10000 66666`
 
 ## Deploy
 
@@ -768,6 +828,7 @@ isp: Cloudflare, Inc -- query: 1.1.1.1 -- status: success -- regionName: Queensl
 
 - Each lua plugin gets its own lua state and will run in a goroutine.<br/>
 - Lua plugins will not go through a proxy if they are not instructed to do so. If you are using the provided http module, you can set the proxy value before loading the http module as provided in the examples under `plugins`. The module will read and set the following environment variables in the order given:
+
   - `ALL_PROXY`
   - `HTTPS_PROXY`
   - `HTTP_PROXY`

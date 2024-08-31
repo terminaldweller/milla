@@ -27,3 +27,4 @@ linters-settings:
         - github.com/yuin/gluare
         - gitlab.com/megalithic-llc/gluasocket
         - github.com/layeh/gopher-json
+        - github.com/mmcdole/gofeed

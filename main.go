@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"index/suffixarray"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
@@ -222,6 +223,8 @@ func getHelpString() string {
 	helpString += "memstats - returns the memory status currently being used\n"
 	helpString += "load - loads a lua script\n"
 	helpString += "unload - unloads a lua script\n"
+	helpString += "remind - reminds you in a given amount of seconds\n"
+	helpString += "roll - rolls a dice. the number is between 1 and 6. One arg sets the upper limit. Two args sets the lower and upper limit in that order\n"
 
 	return helpString
 }
@@ -546,6 +549,71 @@ func runCommand(
 		}
 
 		appConfig.deleteLstate(args[1])
+	case "remind":
+		if len(args) < 2 {
+			client.Cmd.Reply(event, errNotEnoughArgs.Error())
+
+			break
+		}
+
+		seconds, err := strconv.Atoi(args[1])
+		if err != nil {
+			client.Cmd.Reply(event, errNotEnoughArgs.Error())
+
+			break
+		}
+
+		client.Cmd.Reply(event, "Ok, I'll remind you in "+args[1]+" seconds.")
+		time.Sleep(time.Duration(seconds) * time.Second)
+
+		client.Cmd.ReplyTo(event, " Ping!")
+	case "forget":
+
+		client.Cmd.Reply(event, "I no longer even know whether you're supposed to wear or drink a camel.'")
+	case "roll":
+		lowerLimit := 1
+		upperLimit := 6
+
+		if len(args) == 1 {
+		} else if len(args) == 2 {
+			argOne, err := strconv.Atoi(args[1])
+
+			if err != nil {
+				client.Cmd.Reply(event, errNotEnoughArgs.Error())
+
+				break
+			}
+
+			upperLimit = argOne
+		} else if len(args) == 3 {
+			argOne, err := strconv.Atoi(args[1])
+
+			if err != nil {
+				client.Cmd.Reply(event, errNotEnoughArgs.Error())
+
+				break
+			}
+
+			lowerLimit = argOne
+
+			argTwo, err := strconv.Atoi(args[2])
+
+			if err != nil {
+				client.Cmd.Reply(event, errNotEnoughArgs.Error())
+
+				break
+			}
+
+			upperLimit = argTwo
+		} else {
+			client.Cmd.Reply(event, errors.New("too many args").Error())
+
+			break
+		}
+
+		randomNumber := lowerLimit + rand.Intn(upperLimit-lowerLimit+1)
+
+		client.Cmd.ReplyTo(event, fmt.Sprint(randomNumber))
 	default:
 		_, ok := appConfig.LuaCommands[args[0]]
 		if !ok {
@@ -1260,6 +1328,12 @@ func runIRC(appConfig TomlConfig) {
 		populateWatchListWords(&appConfig)
 
 		go WatchListHandler(irc, appConfig)
+	}
+
+	if len(appConfig.Rss) > 0 {
+		irc.Handlers.AddBg(girc.CONNECTED, func(client *girc.Client, _ girc.Event) {
+			go runRSS(&appConfig, irc)
+		})
 	}
 
 	for {

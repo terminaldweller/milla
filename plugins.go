@@ -343,6 +343,7 @@ func millaModuleLoaderClosure(luaState *lua.LState, client *girc.Client, appConf
 		registerStructAsLuaMetaTable[TomlConfig](luaState, millaModule, checkStruct, TomlConfig{}, "toml_config")
 		registerStructAsLuaMetaTable[CustomCommand](luaState, millaModule, checkStruct, CustomCommand{}, "custom_command")
 		registerStructAsLuaMetaTable[LogModel](luaState, millaModule, checkStruct, LogModel{}, "log_model")
+		registerStructAsLuaMetaTable[girc.Event](luaState, millaModule, checkStruct, girc.Event{}, "girc_event")
 
 		luaState.SetGlobal("milla", millaModule)
 

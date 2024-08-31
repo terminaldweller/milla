@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/mmcdole/gofeed"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -43,6 +44,11 @@ type LuaCommand struct {
 	FuncName string
 }
 
+type RssFile struct {
+	RssFile string `toml:"rssFile"`
+	Channel string `toml:"channel"`
+}
+
 type TomlConfig struct {
 	IrcServer           string                   `toml:"ircServer"`
 	IrcNick             string                   `toml:"ircNick"`
@@ -70,29 +76,31 @@ type TomlConfig struct {
 	WebIRCGateway       string                   `toml:"webIRCGateway"`
 	WebIRCHostname      string                   `toml:"webIRCHostname"`
 	WebIRCAddress       string                   `toml:"webIRCAddress"`
+	RSSFile             string                   `toml:"rssFile"`
 	Plugins             []string                 `toml:"plugins"`
 	CustomCommands      map[string]CustomCommand `toml:"customCommands"`
 	WatchLists          map[string]WatchList     `toml:"watchList"`
 	LuaStates           map[string]LuaLstates
 	LuaCommands         map[string]LuaCommand
-	Temp                float64 `toml:"temp"`
-	RequestTimeout      int     `toml:"requestTimeout"`
-	MillaReconnectDelay int     `toml:"millaReconnectDelay"`
-	IrcPort             int     `toml:"ircPort"`
-	KeepAlive           int     `toml:"keepAlive"`
-	MemoryLimit         int     `toml:"memoryLimit"`
-	PingDelay           int     `toml:"pingDelay"`
-	PingTimeout         int     `toml:"pingTimeout"`
-	TopP                float32 `toml:"topP"`
-	TopK                int32   `toml:"topK"`
-	EnableSasl          bool    `toml:"enableSasl"`
-	SkipTLSVerify       bool    `toml:"skipTLSVerify"`
-	UseTLS              bool    `toml:"useTLS"`
-	DisableSTSFallback  bool    `toml:"disableSTSFallback"`
-	AllowFlood          bool    `toml:"allowFlood"`
-	Debug               bool    `toml:"debug"`
-	Out                 bool    `toml:"out"`
-	AdminOnly           bool    `toml:"adminOnly"`
+	Rss                 map[string]RssFile `toml:"rss"`
+	Temp                float64            `toml:"temp"`
+	RequestTimeout      int                `toml:"requestTimeout"`
+	MillaReconnectDelay int                `toml:"millaReconnectDelay"`
+	IrcPort             int                `toml:"ircPort"`
+	KeepAlive           int                `toml:"keepAlive"`
+	MemoryLimit         int                `toml:"memoryLimit"`
+	PingDelay           int                `toml:"pingDelay"`
+	PingTimeout         int                `toml:"pingTimeout"`
+	TopP                float32            `toml:"topP"`
+	TopK                int32              `toml:"topK"`
+	EnableSasl          bool               `toml:"enableSasl"`
+	SkipTLSVerify       bool               `toml:"skipTLSVerify"`
+	UseTLS              bool               `toml:"useTLS"`
+	DisableSTSFallback  bool               `toml:"disableSTSFallback"`
+	AllowFlood          bool               `toml:"allowFlood"`
+	Debug               bool               `toml:"debug"`
+	Out                 bool               `toml:"out"`
+	AdminOnly           bool               `toml:"adminOnly"`
 	pool                *pgxpool.Pool
 	Admins              []string `toml:"admins"`
 	IrcChannels         []string `toml:"ircChannels"`
@@ -168,4 +176,18 @@ type OllamaChatRequest struct {
 type MemoryElement struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
+}
+
+type FeedConfig struct {
+	Name       string `json:"name"`
+	URL        string `json:"url"`
+	UserAgent  string `json:"userAgent"`
+	Proxy      string `json:"proxy"`
+	Timeout    int    `json:"timeout"`
+	FeedParser *gofeed.Parser
+}
+
+type RSSConfig struct {
+	Feeds  []FeedConfig `json:"feeds"`
+	Period int          `json:"period"`
 }
