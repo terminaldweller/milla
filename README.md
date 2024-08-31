@@ -347,9 +347,8 @@ ircProxy = "socks5://127.0.0.1:9050"
 llmProxy = "http://127.0.0.1:8180"
 skipTLSVerify = false
 useTLS = true
-plugins = ["/plugins/plugin1.lua", "/plugins/plugin2.lua"]
 adminOnly = false
-plugins = ["/plugins/ip.lua", "/plugins/urban.lua", "/plugins/remind.lua"]
+plugins = ["/plugins/ip.lua", "/plugins/urban.lua"]
 [ircd.devinet.watchlist.security]
 watchList = ["#securityfeeds"]
 watchFiles = ["/watchfiles/voidbox.list"]
@@ -738,6 +737,11 @@ rss_feed()
 ```
 
 The example rss plugin, accepts a yaml file as input, reeds the provided rss feeds once, extracts the title, author name and link to the resource, sends the feed over to the `#rssfeed` irc channel and exits.<br/>
+Also please note that this is just an example script. If you want milla to handle some rss feeds for you, you can use the builtin rss functionality.<br/>
+
+### Milla's Lua Module
+
+Here's a list of the available function in milla's lua module:
 
 ```lua
 milla.send_message(msg, target)
@@ -872,6 +876,7 @@ Milla would not exist without the following projects:
 - [pgx](https://github.com/jackc/pgx)
 - [ollama](https://github.com/ollama/ollama)
 - [toml](https://github.com/BurntSushi/toml)
+- [gofeed](https://github.com/mmcdole/gofeed)
 
 ## Similar Projects
 

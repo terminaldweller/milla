@@ -56,7 +56,7 @@ func GetFeed(feed FeedConfig,
 		slices.SortFunc(parsedFeed.Items, sortFunc)
 
 		for _, item := range parsedFeed.Items {
-			if item.PublishedParsed.Unix() >= newestFromDB {
+			if item.PublishedParsed.Unix() > newestFromDB {
 				client.Cmd.Message(channel, parsedFeed.Title+": "+item.Title)
 			}
 		}
