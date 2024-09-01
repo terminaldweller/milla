@@ -1067,32 +1067,30 @@ func ChatGPTHandler(
 }
 
 func connectToDB(appConfig *TomlConfig, ctx *context.Context, poolChan chan *pgxpool.Pool) {
-	for {
-		dbURL := fmt.Sprintf(
-			"postgres://%s:%s@%s/%s",
-			appConfig.DatabaseUser,
-			appConfig.DatabasePassword,
-			appConfig.DatabaseAddress,
-			appConfig.DatabaseName)
+	dbURL := fmt.Sprintf(
+		"postgres://%s:%s@%s/%s",
+		appConfig.DatabaseUser,
+		appConfig.DatabasePassword,
+		appConfig.DatabaseAddress,
+		appConfig.DatabaseName)
 
-		log.Println("dbURL:", dbURL)
+	log.Println("dbURL:", dbURL)
 
-		poolConfig, err := pgxpool.ParseConfig(dbURL)
-		if err != nil {
-			log.Println(err)
-		}
+	poolConfig, err := pgxpool.ParseConfig(dbURL)
+	if err != nil {
+		LogErrorFatal(err)
+	}
 
-		pool, err := pgxpool.NewWithConfig(*ctx, poolConfig)
-		if err != nil {
-			log.Println(err)
-			time.Sleep(time.Duration(appConfig.MillaReconnectDelay) * time.Second)
-		} else {
-			log.Printf("%s connected to database", appConfig.IRCDName)
+	pool, err := pgxpool.NewWithConfig(*ctx, poolConfig)
+	if err != nil {
+		LogErrorFatal(err)
+	} else {
+		log.Printf("%s connected to database", appConfig.IRCDName)
 
-			for _, channel := range appConfig.ScrapeChannels {
-				tableName := getTableFromChanName(channel, appConfig.IRCDName)
-				query := fmt.Sprintf(
-					`create table if not exists %s (
+		for _, channel := range appConfig.ScrapeChannels {
+			tableName := getTableFromChanName(channel, appConfig.IRCDName)
+			query := fmt.Sprintf(
+				`create table if not exists %s (
 					id serial primary key,
 					channel text not null,
 					log text not null,
@@ -1100,16 +1098,14 @@ func connectToDB(appConfig *TomlConfig, ctx *context.Context, poolChan chan *pgx
 					dateadded timestamp default current_timestamp
 				)`, tableName)
 
-				_, err = pool.Exec(*ctx, query)
-				if err != nil {
-					log.Println(err.Error())
-					time.Sleep(time.Duration(appConfig.MillaReconnectDelay) * time.Second)
-				}
+			_, err = pool.Exec(*ctx, query)
+			if err != nil {
+				LogErrorFatal(err)
 			}
-
-			appConfig.pool = pool
-			poolChan <- pool
 		}
+
+		appConfig.pool = pool
+		poolChan <- pool
 	}
 }
 
@@ -1121,13 +1117,13 @@ func scrapeChannel(irc *girc.Client, poolChan chan *pgxpool.Pool, appConfig Toml
 			"insert into %s (channel,log,nick) values ('%s','%s','%s')",
 			tableName,
 			sanitizeLog(event.Params[0]),
-			stripColorCodes(event.Last()),
+			sanitizeLog(stripColorCodes(event.Last())),
 			event.Source.Name,
 		)
 
 		_, err := pool.Exec(context.Background(), query)
 		if err != nil {
-			log.Println(err.Error())
+			LogError(err)
 		}
 	})
 }
@@ -1137,7 +1133,7 @@ func populateWatchListWords(appConfig *TomlConfig) {
 		for _, filepath := range watchlist.WatchFiles {
 			filebytes, err := os.ReadFile(filepath)
 			if err != nil {
-				log.Println(err.Error())
+				LogError(err)
 
 				continue
 			}
@@ -1151,7 +1147,7 @@ func populateWatchListWords(appConfig *TomlConfig) {
 		}
 	}
 
-	log.Print(appConfig.WatchLists["security"].Words)
+	// log.Print(appConfig.WatchLists["security"].Words)
 }
 
 func WatchListHandler(irc *girc.Client, appConfig TomlConfig) {

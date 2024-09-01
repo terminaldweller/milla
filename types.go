@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"log"
+	"runtime"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -190,4 +192,22 @@ type FeedConfig struct {
 type RSSConfig struct {
 	Feeds  []FeedConfig `json:"feeds"`
 	Period int          `json:"period"`
+}
+
+func LogError(err error) {
+	fn, file, line, ok := runtime.Caller(1)
+	if ok {
+		log.Printf("%s: %s-%d >>> %v", runtime.FuncForPC(fn).Name(), file, line, err)
+	} else {
+		log.Print(err)
+	}
+}
+
+func LogErrorFatal(err error) {
+	fn, file, line, ok := runtime.Caller(1)
+	if ok {
+		log.Fatalf("%s: %s-%d >>> %v", runtime.FuncForPC(fn).Name(), file, line, err)
+	} else {
+		log.Fatal(err)
+	}
 }
