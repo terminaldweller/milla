@@ -41,8 +41,6 @@ func GetFeed(feed FeedConfig,
 				pool.Exec(ctx, fmt.Sprintf("insert into rss (name, newest_unix_time) values ('%s',0)", rowName))
 			}
 
-			log.Print("Newset from DB: ", newestFromDB)
-
 			sortFunc := func(a, b *gofeed.Item) int {
 				if a.PublishedParsed.Before(*b.PublishedParsed) {
 					return -1

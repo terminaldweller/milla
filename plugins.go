@@ -244,7 +244,7 @@ func ollamaRequestClosure(luaState *lua.LState, appConfig *TomlConfig) func(*lua
 
 		result, err := DoOllamaRequest(appConfig, &[]MemoryElement{}, prompt)
 		if err != nil {
-			log.Print(err)
+			LogError(err)
 		}
 
 		luaState.Push(lua.LString(result))
@@ -259,7 +259,7 @@ func geminiRequestClosure(luaState *lua.LState, appConfig *TomlConfig) func(*lua
 
 		result, err := DoGeminiRequest(appConfig, &[]*genai.Content{}, prompt)
 		if err != nil {
-			log.Print(err)
+			LogError(err)
 		}
 
 		luaState.Push(lua.LString(result))
@@ -274,7 +274,7 @@ func chatGPTRequestClosure(luaState *lua.LState, appConfig *TomlConfig) func(*lu
 
 		result, err := DoChatGPTRequest(appConfig, &[]openai.ChatCompletionMessage{}, prompt)
 		if err != nil {
-			log.Print(err)
+			LogError(err)
 		}
 
 		luaState.Push(lua.LString(result))
@@ -295,13 +295,13 @@ func dbQueryClosure(luaState *lua.LState, appConfig *TomlConfig) func(*lua.LStat
 
 		rows, err := appConfig.pool.Query(context.Background(), query)
 		if err != nil {
-			log.Println(err.Error())
+			LogError(err)
 		}
 		defer rows.Close()
 
 		logs, err := pgx.CollectRows(rows, pgx.RowToStructByName[LogModel])
 		if err != nil {
-			log.Println(err.Error())
+			LogError(err)
 		}
 
 		table := luaState.CreateTable(0, len(logs))
@@ -388,7 +388,7 @@ func RunScript(scriptPath string, client *girc.Client, appConfig *TomlConfig) {
 	if proxyString != "" {
 		proxyURL, err := url.Parse(proxyString)
 		if err != nil {
-			log.Print(err)
+			LogError(err)
 		}
 		proxyTransport.Proxy = http.ProxyURL(proxyURL)
 	}
@@ -399,7 +399,7 @@ func RunScript(scriptPath string, client *girc.Client, appConfig *TomlConfig) {
 
 	err := luaState.DoFile(scriptPath)
 	if err != nil {
-		log.Print(err)
+		LogError(err)
 	}
 }
 
@@ -454,7 +454,7 @@ func RunLuaFunc(
 	if proxyString != "" {
 		proxyURL, err := url.Parse(proxyString)
 		if err != nil {
-			log.Print(err)
+			LogError(err)
 		}
 		proxyTransport.Proxy = http.ProxyURL(proxyURL)
 	}
@@ -464,7 +464,7 @@ func RunLuaFunc(
 	log.Print("Running lua command script: ", scriptPath)
 
 	if err := luaState.DoFile(scriptPath); err != nil {
-		log.Print(err)
+		LogError(err)
 
 		return ""
 	}
@@ -479,7 +479,7 @@ func RunLuaFunc(
 	log.Print(args)
 	if err := luaState.CallByParam(funcLValue, lua.LString(args)); err != nil {
 		log.Print("failed running lua command ...")
-		log.Print(err)
+		LogError(err)
 
 		return ""
 	}

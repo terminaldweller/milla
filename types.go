@@ -211,3 +211,9 @@ func LogErrorFatal(err error) {
 		log.Fatal(err)
 	}
 }
+
+type ProxyRoundTripper struct {
+	APIKey string
+
+	ProxyURL string
+}

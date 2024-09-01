@@ -342,7 +342,7 @@ databaseAddress = "postgres:5432"
 databasePassword = "changeme"
 databaseUser = "devi"
 databaseName = "milla"
-scrapeChannels = ["#soulhack", "#warroom"]
+scrapeChannels = ["#soulhack", "#warroom", "#securityfeeds"]
 ircProxy = "socks5://127.0.0.1:9050"
 llmProxy = "http://127.0.0.1:8180"
 skipTLSVerify = false
@@ -353,19 +353,15 @@ plugins = ["/plugins/ip.lua", "/plugins/urban.lua"]
 watchList = ["#securityfeeds"]
 watchFiles = ["/watchfiles/voidbox.list"]
 alertChannel = "#milla_alerts"
+eventTypes = ["PRIVMSG"]
+fgColor = 0
+bgColor = 28
 [ircd.devinet.rss.manga]
 rssFile = "/rssfeeds/manga.json"
 channel = "#manga"
 [ircd.devinet.rss.anime]
 rssFile = "/rssfeeds/anime.json"
 channel = "#anime"
-[ircd.devinet.watchlist.security]
-watchList = ["#securityfeeds"]
-watchFiles = ["/watchfiles/voidbox.list"]
-alertChannel = "#milla_alerts"
-eventTypes = ["PRIVMSG"]
-fgColor = 0
-bgColor = 28
 
 [ircd.liberanet]
 ircServer = "irc.libera.chat"

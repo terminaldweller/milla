@@ -315,7 +315,7 @@ func handleCustomCommand(
 
 	logs, err := pgx.CollectRows(rows, pgx.RowToStructByName[LogModel])
 	if err != nil {
-		log.Println(err.Error())
+		LogError(err)
 
 		return
 	}
@@ -327,7 +327,7 @@ func handleCustomCommand(
 	log.Println(logs)
 
 	if err != nil {
-		log.Println(err.Error())
+		LogError(err)
 
 		return
 	}
@@ -807,15 +807,44 @@ func OllamaHandler(
 	})
 }
 
+func (t *ProxyRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+
+	if t.ProxyURL != "" {
+		proxyURL, err := url.Parse(t.ProxyURL)
+		if err != nil {
+			return nil, err
+		}
+		transport.Proxy = http.ProxyURL(proxyURL)
+	}
+
+	newReq := req.Clone(req.Context())
+	vals := newReq.URL.Query()
+	vals.Set("key", t.APIKey)
+	newReq.URL.RawQuery = vals.Encode()
+
+	resp, err := transport.RoundTrip(newReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
 func DoGeminiRequest(
 	appConfig *TomlConfig,
 	geminiMemory *[]*genai.Content,
 	prompt string,
 ) (string, error) {
+	httpProxyClient := &http.Client{Transport: &ProxyRoundTripper{
+		APIKey:   appConfig.Apikey,
+		ProxyURL: appConfig.LLMProxy,
+	}}
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
 	defer cancel()
 
-	clientGemini, err := genai.NewClient(ctx, option.WithAPIKey(appConfig.Apikey))
+	clientGemini, err := genai.NewClient(ctx, option.WithHTTPClient(httpProxyClient))
 	if err != nil {
 
 		return "", err
@@ -1338,17 +1367,17 @@ func runIRC(appConfig TomlConfig) {
 		if appConfig.IRCProxy != "" {
 			proxyURL, err := url.Parse(appConfig.IRCProxy)
 			if err != nil {
-				log.Fatal(err.Error())
+				LogErrorFatal(err)
 			}
 
 			dialer, err = proxy.FromURL(proxyURL, &net.Dialer{Timeout: time.Duration(appConfig.RequestTimeout) * time.Second})
 			if err != nil {
-				log.Fatal(err.Error())
+				LogErrorFatal(err)
 			}
 		}
 
 		if err := irc.DialerConnect(dialer); err != nil {
-			log.Println(err)
+			LogError(err)
 			log.Println("reconnecting in " + strconv.Itoa(appConfig.MillaReconnectDelay))
 			time.Sleep(time.Duration(appConfig.MillaReconnectDelay) * time.Second)
 		} else {
@@ -1367,14 +1396,14 @@ func main() {
 
 	data, err := os.ReadFile(*configPath)
 	if err != nil {
-		log.Fatal(err)
+		LogErrorFatal(err)
 	}
 
 	var config AppConfig
 
 	_, err = toml.Decode(string(data), &config)
 	if err != nil {
-		log.Fatal(err)
+		LogErrorFatal(err)
 	}
 
 	for key, value := range config.Ircd {
