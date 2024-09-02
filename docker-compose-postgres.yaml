@@ -19,8 +19,9 @@ services:
     entrypoint: ["/usr/bin/milla"]
     command: ["--config", "/config.toml"]
     volumes:
-      - ./config.toml:/config.toml
+      - ./config-omni.toml:/config.toml
       - /etc/localtime:/etc/localtime:ro
+      - ./plugins/:/plugins/:ro
     cap_drop:
       - ALL
   postgres:
@@ -52,7 +53,6 @@ services:
       - pg_user_secret
       - pg_initdb_args_secret
       - pg_db_secret
-    runtime: runsc
   pgadmin:
     image: dpage/pgadmin4:8.6
     deploy:
@@ -65,7 +65,7 @@ services:
         max-size: "100m"
     environment:
       - PGADMIN_LISTEN_PORT=${PGADMIN_LISTEN_PORT:-5050}
-      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL:-devi@terminaldweller.com}
+      - PGADMIN_DEFAULT_EMAIL=
       - PGADMIN_DEFAULT_PASSWORD_FILE=/run/secrets/pgadmin_pass
       - PGADMIN_DISABLE_POSTFIX=${PGADMIN_DISABLE_POSTFIX:-YES}
     ports:

@@ -1,25 +1,28 @@
 services:
-  milla:
-    image: milla
+  terra:
+    image: milla_distroless_vendored
     build:
       context: .
+      dockerfile: ./Dockerfile_distroless_vendored
     deploy:
       resources:
         limits:
-          memory: 64M
-    user: ${UID}:${GID}
+          memory: 128M
     logging:
       driver: "json-file"
       options:
         max-size: "100m"
     networks:
-      - millanet
+      - terranet
+    user: 1000:1000
     restart: unless-stopped
-    command: ["--config", "/opt/milla/config.toml"]
+    entrypoint: ["/usr/bin/milla"]
+    command: ["--config", "/config.toml"]
     volumes:
-      - ./config.toml:/opt/milla/config.toml
-      - /etc/ssl/certs:/etc/ssl/certs:ro
+      - ./config-omni.toml:/config.toml
+      - /etc/localtime:/etc/localtime:ro
+      - ./plugins/:/plugins/:ro
     cap_drop:
       - ALL
 networks:
-  millanet:
+  terranet:

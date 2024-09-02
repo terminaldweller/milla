@@ -22,13 +22,26 @@ databaseAddress = "postgres:5432"
 databasePassword = "changeme"
 databaseUser = "devi"
 databaseName = "milla"
-scrapeChannels = ["#soulhack", "#warroom"]
+scrapeChannels = ["#soulhack", "#warroom", "#securityfeeds"]
 ircProxy = "socks5://127.0.0.1:9050"
 llmProxy = "http://127.0.0.1:8180"
 skipTLSVerify = false
 useTLS = true
-plugins = ["/plugins/plugin1.lua", "/plugins/plugin2.lua"]
 adminOnly = false
+plugins = ["/plugins/ip.lua", "/plugins/urban.lua"]
+[ircd.devinet.watchlist.security]
+watchList = ["#securityfeeds"]
+watchFiles = ["/watchfiles/voidbox.list"]
+alertChannel = "#milla_alerts"
+eventTypes = ["PRIVMSG"]
+fgColor = 0
+bgColor = 28
+[ircd.devinet.rss.manga]
+rssFile = "/rssfeeds/manga.json"
+channel = "#manga"
+[ircd.devinet.rss.anime]
+rssFile = "/rssfeeds/anime.json"
+channel = "#anime"
 
 [ircd.liberanet]
 ircServer = "irc.libera.chat"
@@ -57,12 +70,12 @@ out = true
 ircProxy = "socks5://127.0.0.1:9051"
 llmProxy = "http://127.0.0.1:8181"
 adminOnly = true
-[ircd.devinet_terra.customCommands.digest]
+[ircd.liberanet.customCommands.digest]
 sql = "select log from liberanet_milla_us_market_news order by log desc;"
 limit = 300
 context = ["you are a sentiment-analysis bot"]
 prompt= "i have provided to you news headlines in the form of previous conversations between you and me using the user role. please provide the digest of the news for me."
-[ircd.devinet_terra.customCommands.summarize]
+[ircd.liberanet.customCommands.summarize]
 sql= "select log from liberanet_milla_us_market_news order by log desc;"
 limit= 300
 context = ["you are a sentiment-analysis bot"]

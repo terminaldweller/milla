@@ -289,6 +289,8 @@ fgColor = 0
 bgColor = 28
 ```
 
+For the watchList option, please remember to put the channels also in your scrape `scrapeChannels`.<br/>
+
 ## RSS
 
 The rss file is self-explanatory. Here's an example:
@@ -458,41 +460,6 @@ milla can be used with [gvisor](https://gvisor.dev/)'s docker runtime, `runsc`.
 
 ```yaml
 services:
-  milla:
-    image: milla
-    build:
-      context: .
-    deploy:
-      resources:
-        limits:
-          memory: 64M
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "100m"
-    networks:
-      - millanet
-      user: ${UID}:${GID}
-    restart: unless-stopped
-    command: ["--config", "/opt/milla/config.toml"]
-    volumes:
-      - ./config-gpt.toml:/opt/milla/config.toml
-      - /etc/localtime:/etc/localtime:ro
-      - /etc/resolv.conf:/etc/resolv.conf:ro
-    cap_drop:
-      - ALL
-    runtime: runsc
-networks:
-  millanet:
-    driver: bridge
-```
-
-### Public Message Storage
-
-milla can be configured to store all incoming public messages for future use in a postgres database. An example docker compose file is provided under `docker-compose-postgres.yaml`.<br/>
-
-```yaml
-services:
   terra:
     image: milla_distroless_vendored
     build:
@@ -517,11 +484,6 @@ services:
       - /etc/localtime:/etc/localtime:ro
     cap_drop:
       - ALL
-    environment:
-      - HTTPS_PROXY=http://172.17.0.1:8120
-      - https_proxy=http://172.17.0.1:8120
-      - HTTP_PROXY=http://172.17.0.1:8120
-      - http_proxy=http://172.17.0.1:8120
   postgres:
     image: postgres:16-alpine3.19
     deploy:
@@ -564,7 +526,7 @@ services:
         max-size: "100m"
     environment:
       - PGADMIN_LISTEN_PORT=${PGADMIN_LISTEN_PORT:-5050}
-      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL:-devi@terminaldweller.com}
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL:
       - PGADMIN_DEFAULT_PASSWORD_FILE=/run/secrets/pgadmin_pass
       - PGADMIN_DISABLE_POSTFIX=${PGADMIN_DISABLE_POSTFIX:-YES}
     ports:
