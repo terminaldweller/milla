@@ -28,6 +28,7 @@ llmProxy = "http://127.0.0.1:8180"
 skipTLSVerify = false
 useTLS = true
 adminOnly = false
+context = ["please respond in french even if i use another language unless you are specifically asked to use any language other than french", "your name is terra"]
 plugins = ["/plugins/ip.lua", "/plugins/urban.lua"]
 [ircd.devinet.watchlist.security]
 watchList = ["#securityfeeds"]

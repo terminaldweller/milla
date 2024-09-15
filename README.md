@@ -235,6 +235,18 @@ webirc password to use.
 
 webirc address to use.
 
+#### context
+
+the context to use for the normal conversations with the bot. Yes, this is how you tell your milla instance to act like a pirate.
+
+```toml
+context = ["you are a pirate. use the language and words a pirate would unless you are asked to do otherwise explicitly", "your name is caption blackbeard"]
+```
+
+```toml
+context = ["please respond in french even if i use another language unless you are specifically asked to use any language other than french", "your name is terra"]
+```
+
 #### rssFile
 
 The file that contains the rss feeeds.
@@ -351,6 +363,7 @@ skipTLSVerify = false
 useTLS = true
 adminOnly = false
 plugins = ["/plugins/ip.lua", "/plugins/urban.lua"]
+context = ["please respond in french even if i use another language unless you are specifically asked to use any language other than french"]
 [ircd.devinet.watchlist.security]
 watchList = ["#securityfeeds"]
 watchFiles = ["/watchfiles/voidbox.list"]

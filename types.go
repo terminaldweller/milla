@@ -80,6 +80,7 @@ type TomlConfig struct {
 	WebIRCAddress       string                   `toml:"webIRCAddress"`
 	RSSFile             string                   `toml:"rssFile"`
 	Plugins             []string                 `toml:"plugins"`
+	Context             []string                 `toml:"context"`
 	CustomCommands      map[string]CustomCommand `toml:"customCommands"`
 	WatchLists          map[string]WatchList     `toml:"watchList"`
 	LuaStates           map[string]LuaLstates

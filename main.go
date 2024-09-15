@@ -345,7 +345,7 @@ func handleCustomCommand(
 
 		for _, customContext := range customCommand.Context {
 			gptMemory = append(gptMemory, openai.ChatCompletionMessage{
-				Role:    openai.ChatMessageRoleUser,
+				Role:    openai.ChatMessageRoleAssistant,
 				Content: customContext,
 			})
 		}
@@ -376,7 +376,7 @@ func handleCustomCommand(
 				Parts: []genai.Part{
 					genai.Text(customContext),
 				},
-				Role: "user",
+				Role: "model",
 			})
 		}
 
@@ -396,7 +396,7 @@ func handleCustomCommand(
 
 		for _, customContext := range customCommand.Context {
 			ollamaMemory = append(ollamaMemory, MemoryElement{
-				Role:    "user",
+				Role:    "assistant",
 				Content: customContext,
 			})
 		}
@@ -649,6 +649,13 @@ func DoOllamaRequest(
 
 	if len(*ollamaMemory) > appConfig.MemoryLimit {
 		*ollamaMemory = []MemoryElement{}
+
+		for _, context := range appConfig.Context {
+			*ollamaMemory = append(*ollamaMemory, MemoryElement{
+				Role:    "assistant",
+				Content: context,
+			})
+		}
 	}
 
 	*ollamaMemory = append(*ollamaMemory, memoryElement)
@@ -887,6 +894,15 @@ func GeminiRequestProcessor(
 
 	if len(*geminiMemory) > appConfig.MemoryLimit {
 		*geminiMemory = []*genai.Content{}
+
+		for _, context := range appConfig.Context {
+			*geminiMemory = append(*geminiMemory, &genai.Content{
+				Parts: []genai.Part{
+					genai.Text(context),
+				},
+				Role: "model",
+			})
+		}
 	}
 
 	*geminiMemory = append(*geminiMemory, &genai.Content{
@@ -1036,6 +1052,13 @@ func ChatGPTRequestProcessor(
 
 	if len(*gptMemory) > appConfig.MemoryLimit {
 		*gptMemory = []openai.ChatCompletionMessage{}
+
+		for _, context := range appConfig.Context {
+			*gptMemory = append(*gptMemory, openai.ChatCompletionMessage{
+				Role:    openai.ChatMessageRoleAssistant,
+				Content: context,
+			})
+		}
 	}
 
 	var writer bytes.Buffer
@@ -1312,10 +1335,33 @@ func runIRC(appConfig TomlConfig) {
 
 	switch appConfig.Provider {
 	case "ollama":
+		for _, context := range appConfig.Context {
+			OllamaMemory = append(OllamaMemory, MemoryElement{
+				Role:    "assistant",
+				Content: context,
+			})
+		}
+
 		OllamaHandler(irc, &appConfig, &OllamaMemory)
 	case "gemini":
+		for _, context := range appConfig.Context {
+			GeminiMemory = append(GeminiMemory, &genai.Content{
+				Parts: []genai.Part{
+					genai.Text(context),
+				},
+				Role: "model",
+			})
+		}
+
 		GeminiHandler(irc, &appConfig, &GeminiMemory)
 	case "chatgpt":
+		for _, context := range appConfig.Context {
+			GPTMemory = append(GPTMemory, openai.ChatCompletionMessage{
+				Role:    openai.ChatMessageRoleAssistant,
+				Content: context,
+			})
+		}
+
 		ChatGPTHandler(irc, &appConfig, &GPTMemory)
 	}
 
