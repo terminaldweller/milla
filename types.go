@@ -56,7 +56,7 @@ type TomlConfig struct {
 	IrcNick             string                   `toml:"ircNick"`
 	IrcSaslUser         string                   `toml:"ircSaslUser"`
 	IrcSaslPass         string                   `toml:"ircSaslPass"`
-	OllamaEndpoint      string                   `toml:"ollamaEndpoint"`
+	Endpoint            string                   `toml:"endpoint"`
 	Model               string                   `toml:"model"`
 	ChromaStyle         string                   `toml:"chromaStyle"`
 	ChromaFormatter     string                   `toml:"chromaFormatter"`
@@ -79,6 +79,7 @@ type TomlConfig struct {
 	WebIRCHostname      string                   `toml:"webIRCHostname"`
 	WebIRCAddress       string                   `toml:"webIRCAddress"`
 	RSSFile             string                   `toml:"rssFile"`
+	AnthropicVersion    string                   `toml:"anthropicVersion"`
 	Plugins             []string                 `toml:"plugins"`
 	Context             []string                 `toml:"context"`
 	CustomCommands      map[string]CustomCommand `toml:"customCommands"`
@@ -174,6 +175,34 @@ type OllamaChatRequest struct {
 	KeepAlive time.Duration        `json:"keep_alive"`
 	Options   OllamaRequestOptions `json:"options"`
 	Messages  []MemoryElement      `json:"messages"`
+}
+
+type ORMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+	Refusal string `json:"refusal"`
+}
+
+type ORChoice struct {
+	FinishReason string    `json:"finish_reason"`
+	Index        int       `json:"index"`
+	Message      ORMessage `json:"message"`
+}
+
+type ORUsage struct {
+	PromptTokens     int `json:"prompt_tokens"`
+	CompletionTokens int `json:"completion_tokens"`
+	TotalTokens      int `json:"total_tokens"`
+}
+type ORResponse struct {
+	Id                string     `json:"id"`
+	Provider          string     `json:"provider"`
+	Model             string     `json:"model"`
+	Object            string     `json:"object"`
+	Created           int64      `json:"created"`
+	Choices           []ORChoice `json:"choices"`
+	SystemFingerprint string     `json:"system_fingerprint"`
+	Usage             ORUsage    `json:"usage"`
 }
 
 type MemoryElement struct {

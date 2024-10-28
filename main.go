@@ -405,6 +405,27 @@ func handleCustomCommand(
 		if result != "" {
 			sendToIRC(client, event, result, appConfig.ChromaFormatter)
 		}
+	case "openrouter":
+		var memory []MemoryElement
+
+		for _, log := range logs {
+			memory = append(memory, MemoryElement{
+				Role:    "user",
+				Content: log.Log,
+			})
+		}
+
+		for _, customContext := range customCommand.Context {
+			memory = append(memory, MemoryElement{
+				Role:    "user",
+				Content: customContext,
+			})
+		}
+
+		result := ORRequestProcessor(appConfig, client, event, &memory, customCommand.Prompt)
+		if result != "" {
+			sendToIRC(client, event, result, appConfig.ChromaFormatter)
+		}
 	default:
 	}
 }
@@ -681,7 +702,7 @@ func DoOllamaRequest(
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
 	defer cancel()
 
-	request, err := http.NewRequest(http.MethodPost, appConfig.OllamaEndpoint, bytes.NewBuffer(jsonPayload))
+	request, err := http.NewRequest(http.MethodPost, appConfig.Endpoint, bytes.NewBuffer(jsonPayload))
 	if err != nil {
 
 		return "", err
@@ -1011,6 +1032,10 @@ func DoChatGPTRequest(
 
 	config := openai.DefaultConfig(appConfig.Apikey)
 	config.HTTPClient = &httpClient
+	if appConfig.Endpoint != "" {
+		config.BaseURL = appConfig.Endpoint
+		log.Print(config.BaseURL)
+	}
 
 	gptClient := openai.NewClientWithConfig(config)
 
@@ -1264,6 +1289,8 @@ func runIRC(appConfig TomlConfig) {
 
 	var GPTMemory []openai.ChatCompletionMessage
 
+	var ORMemory []MemoryElement
+
 	poolChan := make(chan *pgxpool.Pool, 1)
 
 	irc := girc.New(girc.Config{
@@ -1363,6 +1390,15 @@ func runIRC(appConfig TomlConfig) {
 		}
 
 		ChatGPTHandler(irc, &appConfig, &GPTMemory)
+	case "openrouter":
+		for _, context := range appConfig.Context {
+			ORMemory = append(ORMemory, MemoryElement{
+				Role:    "user",
+				Content: context,
+			})
+		}
+
+		ORHandler(irc, &appConfig, &ORMemory)
 	}
 
 	go LoadAllPlugins(&appConfig, irc)

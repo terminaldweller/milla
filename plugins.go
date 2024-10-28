@@ -238,6 +238,21 @@ func ircPartChannelClosure(luaState *lua.LState, client *girc.Client) func(*lua.
 	}
 }
 
+func orRequestClosure(luaState *lua.LState, appConfig *TomlConfig) func(*lua.LState) int {
+	return func(luaState *lua.LState) int {
+		prompt := luaState.CheckString(1)
+
+		result, err := DoORRequest(appConfig, &[]MemoryElement{}, prompt)
+		if err != nil {
+			LogError(err)
+		}
+
+		luaState.Push(lua.LString(result))
+
+		return 1
+	}
+}
+
 func ollamaRequestClosure(luaState *lua.LState, appConfig *TomlConfig) func(*lua.LState) int {
 	return func(luaState *lua.LState) int {
 		prompt := luaState.CheckString(1)
@@ -334,6 +349,7 @@ func millaModuleLoaderClosure(luaState *lua.LState, client *girc.Client, appConf
 			"send_ollama_request":  lua.LGFunction(ollamaRequestClosure(luaState, appConfig)),
 			"send_gemini_request":  lua.LGFunction(geminiRequestClosure(luaState, appConfig)),
 			"send_chatgpt_request": lua.LGFunction(chatGPTRequestClosure(luaState, appConfig)),
+			"send_or_request":      lua.LGFunction(orRequestClosure(luaState, appConfig)),
 			"query_db":             lua.LGFunction(dbQueryClosure(luaState, appConfig)),
 			"register_cmd":         lua.LGFunction(registerLuaCommand(luaState, appConfig)),
 			"url_encode":           lua.LGFunction(urlEncode(luaState)),

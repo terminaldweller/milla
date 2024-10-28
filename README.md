@@ -2,7 +2,7 @@
 
 Milla is an IRC bot that:
 
-- sends things over to an LLM when you ask it questions and prints the answer with optional syntax-highlighting.Currently supported providers: Ollama, Openai, Gemini <br/>
+- sends things over to an LLM when you ask it questions and prints the answer with optional syntax-highlighting.Currently supported providers: Ollama, Openai, Gemini, Openrouter <br/>
 - Milla can run more than one instance of itself
 - Each instance can connect to a different ircd, and will get the full set of configs, e.g. different proxies, different postgres instance, ...
 - You can define custom commands in the form of SQL queries to the database with the SQL query result being passed to the bot along with the given prompt and an optional limit so you don't go bankrupt(unless you are running ollama locally like the smart cookie that you are).<br/>
@@ -45,7 +45,7 @@ The SASL username.
 
 The SASL password for SASL plain authentication. Can also be passed as and environment variable.
 
-#### ollamaEndpoint
+#### Endpoint
 
 The address for the Ollama chat endpoint.
 
