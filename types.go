@@ -73,6 +73,7 @@ type TomlConfig struct {
 	DatabaseName        string                   `toml:"databaseName"`
 	LLMProxy            string                   `toml:"llmProxy"`
 	IRCProxy            string                   `toml:"ircProxy"`
+	GeneralProxy        string                   `toml:"generalProxy"`
 	IRCDName            string                   `toml:"ircdName"`
 	WebIRCPassword      string                   `toml:"webIRCPassword"`
 	WebIRCGateway       string                   `toml:"webIRCGateway"`

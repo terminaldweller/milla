@@ -594,6 +594,15 @@ func runCommand(
 	case "forget":
 
 		client.Cmd.Reply(event, "I no longer even know whether you're supposed to wear or drink a camel.'")
+	case "whois":
+		if len(args) < 2 {
+			client.Cmd.Reply(event, errNotEnoughArgs.Error())
+
+			break
+		}
+
+		ianaResponse := IANAWhoisGet(args[1], appConfig)
+		client.Cmd.Reply(event, ianaResponse)
 	case "roll":
 		lowerLimit := 1
 		upperLimit := 6
@@ -1227,7 +1236,6 @@ func populateWatchListWords(appConfig *TomlConfig) {
 		}
 	}
 
-	// log.Print(appConfig.WatchLists["security"].Words)
 }
 
 func WatchListHandler(irc *girc.Client, appConfig TomlConfig) {

@@ -219,6 +219,14 @@ Determines which proxy to use to connect to the LLM endpoint:
 llmProxy = "socks5://127.0.0.1:9050"
 ```
 
+#### generalProxy
+
+Determines which proxy to use for other things:
+
+```
+llmProxy = "socks5://127.0.0.1:9050"
+```
+
 #### ircdName
 
 Name of the milla instance, must be unique across all instances.
@@ -470,6 +478,10 @@ Pings the user after the given amount in seconds: `/remind 1200`
 #### roll
 
 Rolls a number between 1 and 6 if no arguments are given. With one argument it rolls a number between 1 and the given number. With two arguments it rolls a number between the two numbers: `/rool 10000 66666`
+
+#### whois
+
+IANA whois endpoint query: `milla: /whois xyz`
 
 ## Deploy
 
