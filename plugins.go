@@ -221,8 +221,13 @@ func registerLuaCommand(luaState *lua.LState, appConfig *TomlConfig) func(*lua.L
 func ircJoinChannelClosure(luaState *lua.LState, client *girc.Client) func(*lua.LState) int {
 	return func(luaState *lua.LState) int {
 		channel := luaState.CheckString(1)
+		password := luaState.CheckString(2)
 
-		client.Cmd.Join(channel)
+		if password != "" {
+			client.Cmd.JoinKey(channel, password)
+		} else {
+			client.Cmd.Join(channel)
+		}
 
 		return 0
 	}

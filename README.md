@@ -78,6 +78,7 @@ Which LLM provider to use. The supported options are:
 - [ollama](https://github.com/ollama/ollama)
 - chatgpt
 - gemini
+- [openrouter](https://openrouter.ai/)
 
 #### apikey
 
@@ -170,8 +171,11 @@ admins = ["admin1", "admin2"]
 List of channels for the bot to join when it connects to the server.
 
 ```
-ircChannels = ["#channel1", "#channel2"]
+ircChannels = [["#channel1","channel1password"], ["#channel2",""], ["#channel3"]]
 ```
+
+In the provided example, milla will attempt to join `#channel1` with the provided password while for the other two channels, it will try to join normally.<br/>
+This behaviour is consistant across all places where a channel name is the input.<br/>
 
 Please note that the bot does not have to join a channel to be usable. One can simply query the bot directly as well.<br/>
 
@@ -194,6 +198,10 @@ Name of the database.
 #### scrapeChannels
 
 List of channels that the bot will scrape into a database table. You can later on use these databases for the custom commands.<br/>
+
+```
+ircChannels = [["#channel1","channel1password"], ["#channel2",""], ["#channel3"]]
+```
 
 #### ircProxy
 
@@ -293,9 +301,9 @@ Watchlists allow you to specify a list of channels to watch. The watched values 
 
 ```toml
 [ircd.devinet_terra.watchlist.security]
-watchList = ["#securityfeeds"]
+watchList = [["#securityfeeds"]]
 watchFiles = ["/watchfiles/voidbox.list"]
-alertChannel = "#milla_alerts"
+alertChannel = ["#milla_alerts"]
 eventTypes = ["PRIVMSG"]
 fgColor = 0
 bgColor = 28
@@ -339,7 +347,7 @@ ircNick = "milla"
 enableSasl = true
 ircSaslUser = "milla"
 ircSaslPass = "xxxxx"
-ircChannels = ["##chan1", "##chan2"]
+ircChannels = [["##chan1"], ["##chan2"]]
 temp = 0.2
 requestTimeout = 10
 millaReconnectDelay = 60
@@ -356,7 +364,7 @@ databaseAddress = "postgres:5432"
 databasePassword = "changeme"
 databaseUser = "devi"
 databaseName = "milla"
-scrapeChannels = ["#soulhack", "#warroom", "#securityfeeds"]
+scrapeChannels = [["#soulhack"], ["#warroom"], ["#securityfeeds"]]
 ircProxy = "socks5://127.0.0.1:9050"
 llmProxy = "http://127.0.0.1:8180"
 skipTLSVerify = false
@@ -365,18 +373,18 @@ adminOnly = false
 plugins = ["/plugins/ip.lua", "/plugins/urban.lua"]
 context = ["please respond in french even if i use another language unless you are specifically asked to use any language other than french"]
 [ircd.devinet.watchlist.security]
-watchList = ["#securityfeeds"]
+watchList = [["#securityfeeds"]]
 watchFiles = ["/watchfiles/voidbox.list"]
-alertChannel = "#milla_alerts"
+alertChannel = ["#milla_alerts"]
 eventTypes = ["PRIVMSG"]
 fgColor = 0
 bgColor = 28
 [ircd.devinet.rss.manga]
 rssFile = "/rssfeeds/manga.json"
-channel = "#manga"
+channel = ["#manga"]
 [ircd.devinet.rss.anime]
 rssFile = "/rssfeeds/anime.json"
-channel = "#anime"
+channel = ["#anime"]
 
 [ircd.liberanet]
 ircServer = "irc.libera.chat"
@@ -399,7 +407,7 @@ useTLS = true
 disableSTSFallback = true
 allowFlood = false
 admins = ["noone_has_this_nick"]
-ircChannels = ["##milla1", "##milla2"]
+ircChannels = [["##milla1"], ["##milla2"]]
 debug = true
 out = true
 ircProxy = "socks5://127.0.0.1:9051"
@@ -441,7 +449,7 @@ Returns memory stats for milla.
 
 #### join
 
-Joins a channel: `/join #channel`
+Joins a channel: `/join #channel [optional_password]`
 
 #### leave
 
@@ -719,8 +727,10 @@ milla.send_message(msg, target)
 ```
 
 ```lua
-milla.join_channel(channel)
+milla.join_channel(channel,password)
 ```
+
+Please note that even if the channel doesn't have a password, it still will require the second argument and the second argument must be empty.
 
 ```lua
 milla.part_channel(channel)
@@ -736,6 +746,10 @@ milla.send_gemini_request(prompt)
 
 ```lua
 milla.send_chatgpt_request(prompt)
+```
+
+```lua
+milla.send_or_request(prompt)
 ```
 
 ```lua

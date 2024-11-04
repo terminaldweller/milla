@@ -32,13 +32,13 @@ type LuaLstates struct {
 }
 
 type WatchList struct {
-	AlertChannel string   `toml:"alertChannel"`
-	WatchList    []string `toml:"watchList"`
-	WatchFiles   []string `toml:"watchFiles"`
-	Words        []string `toml:"watchWords"`
-	EventTypes   []string `toml:"eventTypes"`
-	FGColor      int      `toml:"fgColor"`
-	BGColor      int      `toml:"bgColor"`
+	AlertChannel []string   `toml:"alertChannel"`
+	WatchList    [][]string `toml:"watchList"`
+	WatchFiles   []string   `toml:"watchFiles"`
+	Words        []string   `toml:"watchWords"`
+	EventTypes   []string   `toml:"eventTypes"`
+	FGColor      int        `toml:"fgColor"`
+	BGColor      int        `toml:"bgColor"`
 }
 
 type LuaCommand struct {
@@ -47,8 +47,8 @@ type LuaCommand struct {
 }
 
 type RssFile struct {
-	RssFile string `toml:"rssFile"`
-	Channel string `toml:"channel"`
+	RssFile string   `toml:"rssFile"`
+	Channel []string `toml:"channel"`
 }
 
 type TomlConfig struct {
@@ -106,9 +106,9 @@ type TomlConfig struct {
 	Out                 bool               `toml:"out"`
 	AdminOnly           bool               `toml:"adminOnly"`
 	pool                *pgxpool.Pool
-	Admins              []string `toml:"admins"`
-	IrcChannels         []string `toml:"ircChannels"`
-	ScrapeChannels      []string `toml:"scrapeChannels"`
+	Admins              []string   `toml:"admins"`
+	IrcChannels         [][]string `toml:"ircChannels"`
+	ScrapeChannels      [][]string `toml:"scrapeChannels"`
 }
 
 func (config *TomlConfig) insertLState(

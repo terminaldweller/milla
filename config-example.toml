@@ -5,7 +5,7 @@ ircNick = "milla"
 enableSasl = true
 ircSaslUser = "milla"
 ircSaslPass = "xxxxx"
-ircChannels = ["##chan1", "##chan2"]
+ircChannels = [["##chan1"], ["##chan2"]]
 temp = 0.2
 requestTimeout = 10
 millaReconnectDelay = 60
@@ -22,7 +22,7 @@ databaseAddress = "postgres:5432"
 databasePassword = "changeme"
 databaseUser = "devi"
 databaseName = "milla"
-scrapeChannels = ["#soulhack", "#warroom", "#securityfeeds"]
+scrapeChannels = [["#soulhack"], ["#warroom"], ["#securityfeeds"]]
 ircProxy = "socks5://127.0.0.1:9050"
 llmProxy = "http://127.0.0.1:8180"
 skipTLSVerify = false
@@ -31,18 +31,18 @@ adminOnly = false
 context = ["please respond in french even if i use another language unless you are specifically asked to use any language other than french", "your name is terra"]
 plugins = ["/plugins/ip.lua", "/plugins/urban.lua"]
 [ircd.devinet.watchlist.security]
-watchList = ["#securityfeeds"]
+watchList = [["#securityfeeds"]]
 watchFiles = ["/watchfiles/voidbox.list"]
-alertChannel = "#milla_alerts"
+alertChannel = ["#milla_alerts"]
 eventTypes = ["PRIVMSG"]
 fgColor = 0
 bgColor = 28
 [ircd.devinet.rss.manga]
 rssFile = "/rssfeeds/manga.json"
-channel = "#manga"
+channel = ["#manga"]
 [ircd.devinet.rss.anime]
 rssFile = "/rssfeeds/anime.json"
-channel = "#anime"
+channel = ["#anime"]
 
 [ircd.liberanet]
 ircServer = "irc.libera.chat"
@@ -65,7 +65,7 @@ useTLS = true
 disableSTSFallback = true
 allowFlood = false
 admins = ["noone_has_this_nick"]
-ircChannels = ["##milla1", "##milla2"]
+ircChannels = [["##milla1"], ["##milla2"]]
 debug = true
 out = true
 ircProxy = "socks5://127.0.0.1:9051"

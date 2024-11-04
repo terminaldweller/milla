@@ -21,7 +21,8 @@ import (
 func GetFeed(feed FeedConfig,
 	client *girc.Client,
 	pool *pgxpool.Pool,
-	channel, groupName string,
+	channel []string,
+	groupName string,
 ) {
 	rowName := groupName + "__" + feed.Name + "__"
 
@@ -55,7 +56,7 @@ func GetFeed(feed FeedConfig,
 
 			for _, item := range parsedFeed.Items {
 				if item.PublishedParsed.Unix() > newestFromDB {
-					client.Cmd.Message(channel, parsedFeed.Title+": "+item.Title+">>>"+item.Link)
+					client.Cmd.Message(channel[0], parsedFeed.Title+": "+item.Title+">>>"+item.Link)
 				}
 			}
 
@@ -77,7 +78,8 @@ func feedDispatcher(
 	config RSSConfig,
 	client *girc.Client,
 	pool *pgxpool.Pool,
-	channel, groupName string,
+	channel []string,
+	groupName string,
 	period int,
 ) {
 	for {
@@ -164,7 +166,7 @@ func runRSS(appConfig *TomlConfig, client *girc.Client) {
 
 	for groupName, rss := range appConfig.Rss {
 		log.Print("RSS: joining ", rss.Channel)
-		client.Cmd.Join(rss.Channel)
+		IrcJoin(client, rss.Channel)
 		rssConfig := ParseRSSConfig(rss.RssFile)
 		if rssConfig == nil {
 			log.Print("Could not parse RSS config file " + rss.RssFile + ". Exiting.")

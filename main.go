@@ -518,8 +518,11 @@ func runCommand(
 
 			break
 		}
-
-		client.Cmd.Join(args[1])
+		if len(args) == 3 {
+			IrcJoin(client, []string{args[1], args[2]})
+		} else {
+			client.Cmd.Join(args[1])
+		}
 	case "leave":
 		if !isFromAdmin(appConfig.Admins, event) {
 			break
@@ -1165,7 +1168,7 @@ func connectToDB(appConfig *TomlConfig, ctx *context.Context, poolChan chan *pgx
 		log.Printf("%s connected to database", appConfig.IRCDName)
 
 		for _, channel := range appConfig.ScrapeChannels {
-			tableName := getTableFromChanName(channel, appConfig.IRCDName)
+			tableName := getTableFromChanName(channel[0], appConfig.IRCDName)
 			query := fmt.Sprintf(
 				`create table if not exists %s (
 					id serial primary key,
@@ -1241,7 +1244,7 @@ func WatchListHandler(irc *girc.Client, appConfig TomlConfig) {
 			for _, channel := range watchlist.WatchList {
 				isRightEventType = false
 
-				if channel == event.Params[0] {
+				if channel[0] == event.Params[0] {
 
 					for _, eventType := range watchlist.EventTypes {
 						if eventType == event.Command {
@@ -1268,7 +1271,7 @@ func WatchListHandler(irc *girc.Client, appConfig TomlConfig) {
 									"\x1b[0m" + event.Last()[indexes[0]+1+nextWhitespaceIndex:]
 
 							irc.Cmd.Message(
-								watchlist.AlertChannel,
+								watchlist.AlertChannel[0],
 								fmt.Sprintf("%s: %s", watchname, rewrittenMessage))
 
 							log.Printf("matched from watchlist -- %s: %s", watchname, event.Last())
@@ -1356,7 +1359,7 @@ func runIRC(appConfig TomlConfig) {
 
 	irc.Handlers.AddBg(girc.CONNECTED, func(c *girc.Client, _ girc.Event) {
 		for _, channel := range appConfig.IrcChannels {
-			c.Cmd.Join(channel)
+			IrcJoin(irc, channel)
 		}
 	})
 
@@ -1413,7 +1416,7 @@ func runIRC(appConfig TomlConfig) {
 	if len(appConfig.ScrapeChannels) > 0 {
 		irc.Handlers.AddBg(girc.CONNECTED, func(c *girc.Client, _ girc.Event) {
 			for _, channel := range appConfig.ScrapeChannels {
-				c.Cmd.Join(channel)
+				IrcJoin(irc, channel)
 			}
 		})
 
@@ -1424,10 +1427,10 @@ func runIRC(appConfig TomlConfig) {
 		irc.Handlers.AddBg(girc.CONNECTED, func(client *girc.Client, _ girc.Event) {
 			for _, watchlist := range appConfig.WatchLists {
 				log.Print("joining ", watchlist.AlertChannel)
-				client.Cmd.Join(watchlist.AlertChannel)
+				IrcJoin(irc, watchlist.AlertChannel)
 
 				for _, channel := range watchlist.WatchList {
-					client.Cmd.Join(channel)
+					IrcJoin(irc, channel)
 				}
 			}
 		})
