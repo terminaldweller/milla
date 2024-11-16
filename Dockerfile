@@ -13,4 +13,5 @@ RUN set -eux; \
   chown -R user:user "$HOME"
 COPY --from=builder /milla/milla "$HOME/milla"
 RUN chown user:user "$HOME/milla"
+USER user
 ENTRYPOINT ["home/user/milla"]

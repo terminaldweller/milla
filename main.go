@@ -165,52 +165,6 @@ func extractLast256ColorEscapeCode(str string) (string, error) {
 	return lastMatch[1], nil
 }
 
-func chunker(inputString string, chromaFormatter string) []string {
-	chunks := strings.Split(inputString, "\n")
-
-	switch chromaFormatter {
-	case "terminal":
-		fallthrough
-	case "terminal8":
-		fallthrough
-	case "terminal16":
-		fallthrough
-	case "terminal256":
-		for count, chunk := range chunks {
-			lastColorCode, err := extractLast256ColorEscapeCode(chunk)
-			if err != nil {
-				continue
-			}
-
-			if count <= len(chunks)-2 {
-				chunks[count+1] = fmt.Sprintf("\033[38;5;%sm", lastColorCode) + chunks[count+1]
-			}
-		}
-	case "terminal16m":
-		fallthrough
-	default:
-	}
-
-	return chunks
-}
-
-func sendToIRC(
-	client *girc.Client,
-	event girc.Event,
-	message string,
-	chromaFormatter string,
-) {
-	chunks := chunker(message, chromaFormatter)
-
-	for _, chunk := range chunks {
-		if len(strings.TrimSpace(chunk)) == 0 {
-			continue
-		}
-
-		client.Cmd.Reply(event, chunk)
-	}
-}
-
 func getHelpString() string {
 	helpString := "Commands:\n"
 	helpString += "help - show this help message\n"
@@ -242,6 +196,13 @@ func setFieldByName(v reflect.Value, field string, value string) error {
 	switch fieldValue.Kind() {
 	case reflect.String:
 		fieldValue.SetString(value)
+	case reflect.Int32:
+		intValue, err := strconv.ParseInt(value, 10, 32)
+		if err != nil {
+			return errWrongDataForField
+		}
+
+		fieldValue.SetInt(int64(intValue))
 	case reflect.Int:
 		intValue, err := strconv.Atoi(value)
 		if err != nil {
@@ -357,7 +318,7 @@ func handleCustomCommand(
 
 		result := ChatGPTRequestProcessor(appConfig, client, event, &gptMemory, customCommand.Prompt)
 		if result != "" {
-			sendToIRC(client, event, result, appConfig.ChromaFormatter)
+			SendToIRC(client, event, result, appConfig.ChromaFormatter)
 		}
 	case "gemini":
 		var geminiMemory []*genai.Content
@@ -382,7 +343,7 @@ func handleCustomCommand(
 
 		result := GeminiRequestProcessor(appConfig, client, event, &geminiMemory, customCommand.Prompt)
 		if result != "" {
-			sendToIRC(client, event, result, appConfig.ChromaFormatter)
+			SendToIRC(client, event, result, appConfig.ChromaFormatter)
 		}
 	case "ollama":
 		var ollamaMemory []MemoryElement
@@ -403,7 +364,7 @@ func handleCustomCommand(
 
 		result := OllamaRequestProcessor(appConfig, client, event, &ollamaMemory, customCommand.Prompt)
 		if result != "" {
-			sendToIRC(client, event, result, appConfig.ChromaFormatter)
+			SendToIRC(client, event, result, appConfig.ChromaFormatter)
 		}
 	case "openrouter":
 		var memory []MemoryElement
@@ -424,7 +385,7 @@ func handleCustomCommand(
 
 		result := ORRequestProcessor(appConfig, client, event, &memory, customCommand.Prompt)
 		if result != "" {
-			sendToIRC(client, event, result, appConfig.ChromaFormatter)
+			SendToIRC(client, event, result, appConfig.ChromaFormatter)
 		}
 	default:
 	}
@@ -460,7 +421,7 @@ func runCommand(
 
 	switch args[0] {
 	case "help":
-		sendToIRC(client, event, getHelpString(), "noop")
+		SendToIRC(client, event, getHelpString(), "noop")
 	case "set":
 		if len(args) < 3 { //nolint: mnd,gomnd
 			client.Cmd.Reply(event, errNotEnoughArgs.Error())
@@ -498,7 +459,13 @@ func runCommand(
 		for i := range value.NumField() {
 			field := t.Field(i)
 			fieldValue := value.Field(i).Interface()
-			client.Cmd.Reply(event, fmt.Sprintf("%s: %v", field.Name, fieldValue))
+
+			fieldValueString, ok := fieldValue.(string)
+			if !ok {
+				continue
+			}
+
+			client.Cmd.Reply(event, fmt.Sprintf("%s: %v", field.Name, fieldValueString))
 		}
 	case "memstats":
 		var memStats runtime.MemStats
@@ -842,7 +809,7 @@ func OllamaHandler(
 
 		result := OllamaRequestProcessor(appConfig, client, event, ollamaMemory, prompt)
 		if result != "" {
-			sendToIRC(client, event, result, appConfig.ChromaFormatter)
+			SendToIRC(client, event, result, appConfig.ChromaFormatter)
 		}
 	})
 }
@@ -1005,7 +972,7 @@ func GeminiHandler(
 		result := GeminiRequestProcessor(appConfig, client, event, geminiMemory, prompt)
 
 		if result != "" {
-			sendToIRC(client, event, result, appConfig.ChromaFormatter)
+			SendToIRC(client, event, result, appConfig.ChromaFormatter)
 		}
 	})
 }
@@ -1150,7 +1117,7 @@ func ChatGPTHandler(
 
 		result := ChatGPTRequestProcessor(appConfig, client, event, gptMemory, prompt)
 		if result != "" {
-			sendToIRC(client, event, result, appConfig.ChromaFormatter)
+			SendToIRC(client, event, result, appConfig.ChromaFormatter)
 		}
 	})
 }

@@ -193,7 +193,7 @@ func ORHandler(
 
 		result := ORRequestProcessor(appConfig, client, event, memory, prompt)
 		if result != "" {
-			sendToIRC(client, event, result, appConfig.ChromaFormatter)
+			SendToIRC(client, event, result, appConfig.ChromaFormatter)
 		}
 	})
 

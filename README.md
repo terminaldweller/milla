@@ -132,7 +132,11 @@ Ping timeout for the IRC server.
 
 #### topP
 
+set the Top_p paramater
+
 #### topK
+
+set the Top_k parameter
 
 #### skipTLSVerify
 
@@ -482,6 +486,7 @@ Rolls a number between 1 and 6 if no arguments are given. With one argument it r
 #### whois
 
 IANA whois endpoint query: `milla: /whois xyz`
+This command uses the `generalProxy` option.
 
 ## Deploy
 
