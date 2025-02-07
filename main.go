@@ -1541,11 +1541,13 @@ func runIRC(appConfig TomlConfig) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.MillaReconnectDelay)*time.Second)
 	defer cancel()
 
-	_, err := backoff.Retry(ctx, connectToIRC, backoff.WithBackOff(backoff.NewExponentialBackOff()))
-	if err != nil {
-		LogError(err)
-	} else {
-		return
+	for {
+		_, err := backoff.Retry(ctx, connectToIRC, backoff.WithBackOff(backoff.NewExponentialBackOff()))
+		if err != nil {
+			LogError(err)
+		} else {
+			return
+		}
 	}
 }
 
