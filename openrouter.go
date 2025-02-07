@@ -45,6 +45,7 @@ func DoORRequest(
 
 	ollamaRequest := OllamaChatRequest{
 		Model:    appConfig.Model,
+		System:   appConfig.SystemPrompt,
 		Messages: *memory,
 	}
 

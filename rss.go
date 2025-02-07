@@ -26,12 +26,16 @@ func GetFeed(feed FeedConfig,
 ) {
 	rowName := groupName + "__" + feed.Name + "__"
 
-	parsedFeed, err := feed.FeedParser.ParseURL(feed.URL)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(feed.Timeout)*time.Second)
+	defer cancel()
+
+	parsedFeed, err := feed.FeedParser.ParseURLWithContext(feed.URL, ctx)
 	if err != nil {
 		LogError(err)
 	} else {
 		if len(parsedFeed.Items) > 0 {
 			query := fmt.Sprintf("select newest_unix_time from rss where name = '%s'", rowName)
+
 			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(10)*time.Second)
 			defer cancel()
 
@@ -39,7 +43,12 @@ func GetFeed(feed FeedConfig,
 
 			err := pool.QueryRow(ctx, query).Scan(&newestFromDB)
 			if err != nil {
-				pool.Exec(ctx, fmt.Sprintf("insert into rss (name, newest_unix_time) values ('%s',0)", rowName))
+				_, err = pool.Exec(ctx, fmt.Sprintf("insert into rss (name, newest_unix_time) values ('%s',0)", rowName))
+				if err != nil {
+					LogError(err)
+
+					return
+				}
 			}
 
 			sortFunc := func(a, b *gofeed.Item) int {
@@ -56,7 +65,7 @@ func GetFeed(feed FeedConfig,
 
 			for _, item := range parsedFeed.Items {
 				if item.PublishedParsed.Unix() > newestFromDB {
-					client.Cmd.Message(channel[0], parsedFeed.Title+": "+item.Title+">>>"+item.Link)
+					client.Cmd.Message(channel[0], parsedFeed.Title+": "+item.Title+" >>> "+item.Link)
 				}
 			}
 
@@ -69,7 +78,6 @@ func GetFeed(feed FeedConfig,
 			if err != nil {
 				LogError(err)
 			}
-
 		}
 	}
 }
@@ -83,41 +91,45 @@ func feedDispatcher(
 	period int,
 ) {
 	for {
-		for i := range len(config.Feeds) {
-			config.Feeds[i].FeedParser = gofeed.NewParser()
+		if client.IsConnected() {
+			for i := range len(config.Feeds) {
+				config.Feeds[i].FeedParser = gofeed.NewParser()
 
-			config.Feeds[i].FeedParser.UserAgent = config.Feeds[i].UserAgent
+				config.Feeds[i].FeedParser.UserAgent = config.Feeds[i].UserAgent
 
-			if config.Feeds[i].Proxy != "" {
-				proxyURL, err := url.Parse(config.Feeds[i].Proxy)
-				if err != nil {
-					LogError(err)
+				if config.Feeds[i].Proxy != "" {
+					proxyURL, err := url.Parse(config.Feeds[i].Proxy)
+					if err != nil {
+						LogError(err)
 
-					continue
+						continue
+					}
+
+					dialer, err := proxy.FromURL(proxyURL, &net.Dialer{Timeout: time.Duration(config.Feeds[i].Timeout) * time.Second})
+					if err != nil {
+						LogError(err)
+
+						continue
+					}
+
+					httpClient := http.Client{
+						Transport: &http.Transport{
+							Dial: dialer.Dial,
+						},
+					}
+
+					config.Feeds[i].FeedParser.Client = &httpClient
 				}
-
-				dialer, err := proxy.FromURL(proxyURL, &net.Dialer{Timeout: time.Duration(config.Feeds[i].Timeout) * time.Second})
-				if err != nil {
-					LogError(err)
-
-					continue
-				}
-
-				httpClient := http.Client{
-					Transport: &http.Transport{
-						Dial: dialer.Dial,
-					},
-				}
-
-				config.Feeds[i].FeedParser.Client = &httpClient
 			}
-		}
 
-		for _, feed := range config.Feeds {
-			go GetFeed(feed, client, pool, channel, groupName)
-		}
+			for _, feed := range config.Feeds {
+				go GetFeed(feed, client, pool, channel, groupName)
+			}
 
-		time.Sleep(time.Duration(period) * time.Second)
+			time.Sleep(time.Duration(period) * time.Second)
+		} else {
+			time.Sleep(time.Duration(10) * time.Second)
+		}
 	}
 }
 
@@ -152,21 +164,24 @@ func runRSS(appConfig *TomlConfig, client *girc.Client) {
 		)`)
 
 	for {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(10)*time.Second)
-		defer cancel()
+		if appConfig.pool != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(10)*time.Second)
+			defer cancel()
 
-		_, err := appConfig.pool.Exec(ctx, query)
-		if err != nil {
-			LogError(err)
-			time.Sleep(time.Duration(60) * time.Second)
-		} else {
-			break
+			_, err := appConfig.pool.Exec(ctx, query)
+			if err != nil {
+				LogError(err)
+			} else {
+				break
+			}
 		}
+
+		time.Sleep(time.Duration(10) * time.Second)
 	}
 
+	log.Print("spawning the RSS feed dispatcher")
+
 	for groupName, rss := range appConfig.Rss {
-		log.Print("RSS: joining ", rss.Channel)
-		IrcJoin(client, rss.Channel)
 		rssConfig := ParseRSSConfig(rss.RssFile)
 		if rssConfig == nil {
 			log.Print("Could not parse RSS config file " + rss.RssFile + ". Exiting.")

@@ -65,7 +65,8 @@ function milla_urban(cli_args)
     for _, v in ipairs(json_response["list"]) do
         for kk, vv in pairs(v) do print(kk, vv) end
         if count > 0 then
-            result = result .. tostring(count) .. v["definition"] .. "----"
+            result = result .. tostring(count) .. " - " .. v["definition"] ..
+                         " ---- "
         end
         count = count - 1
     end

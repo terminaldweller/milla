@@ -20,10 +20,11 @@ type LogModel struct {
 }
 
 type CustomCommand struct {
-	SQL     string   `toml:"sql"`
-	Limit   int      `toml:"limit"`
-	Context []string `toml:"context"`
-	Prompt  string   `toml:"prompt"`
+	SQL          string   `toml:"sql"`
+	Limit        int      `toml:"limit"`
+	Context      []string `toml:"context"`
+	Prompt       string   `toml:"prompt"`
+	SystemPrompt string   `toml:"systemPrompt"`
 }
 
 type LuaLstates struct {
@@ -46,6 +47,13 @@ type LuaCommand struct {
 	FuncName string
 }
 
+type TriggeredScripts struct {
+	Path        string
+	FuncName    string
+	Channels    [][]string
+	TriggerType []string
+}
+
 type RssFile struct {
 	RssFile string   `toml:"rssFile"`
 	Channel []string `toml:"channel"`
@@ -62,7 +70,6 @@ type TomlConfig struct {
 	ChromaFormatter     string                   `toml:"chromaFormatter"`
 	Provider            string                   `toml:"provider"`
 	Apikey              string                   `toml:"apikey"`
-	OllamaSystem        string                   `toml:"ollamaSystem"`
 	ClientCertPath      string                   `toml:"clientCertPath"`
 	ServerPass          string                   `toml:"serverPass"`
 	Bind                string                   `toml:"bind"`
@@ -83,12 +90,13 @@ type TomlConfig struct {
 	AnthropicVersion    string                   `toml:"anthropicVersion"`
 	Plugins             []string                 `toml:"plugins"`
 	Context             []string                 `toml:"context"`
+	SystemPrompt        string                   `toml:"systemPrompt"`
 	CustomCommands      map[string]CustomCommand `toml:"customCommands"`
 	WatchLists          map[string]WatchList     `toml:"watchList"`
 	LuaStates           map[string]LuaLstates
 	LuaCommands         map[string]LuaCommand
+	TriggeredScripts    map[string]TriggeredScripts
 	Rss                 map[string]RssFile `toml:"rss"`
-	Temp                float64            `toml:"temp"`
 	RequestTimeout      int                `toml:"requestTimeout"`
 	MillaReconnectDelay int                `toml:"millaReconnectDelay"`
 	IrcPort             int                `toml:"ircPort"`
@@ -96,6 +104,16 @@ type TomlConfig struct {
 	MemoryLimit         int                `toml:"memoryLimit"`
 	PingDelay           int                `toml:"pingDelay"`
 	PingTimeout         int                `toml:"pingTimeout"`
+	OllamaMirostat      int                `json:"ollamaMirostat"`
+	OllamaMirostatEta   float64            `json:"ollamaMirostatEta"`
+	OllamaMirostatTau   float64            `json:"ollamaMirostatTau"`
+	OllamaNumCtx        int                `json:"ollamaNumCtx"`
+	OllamaRepeatLastN   int                `json:"ollamaRepeatLastN"`
+	OllamaRepeatPenalty float64            `json:"ollamaRepeatPenalty"`
+	Temperature         float64            `json:"temperature"`
+	OllamaSeed          int                `json:"ollamaSeed"`
+	OllamaNumPredict    int                `json:"ollamaNumPredict"`
+	OllamaMinP          float64            `json:"ollamaMinP"`
 	TopP                float32            `toml:"topP"`
 	TopK                int32              `toml:"topK"`
 	EnableSasl          bool               `toml:"enableSasl"`
@@ -153,12 +171,42 @@ func (config *TomlConfig) deleteLuaCommand(name string) {
 	delete(config.LuaCommands, name)
 }
 
+func (config *TomlConfig) insertTriggeredScript(path, cmd string, triggerType []string) {
+	if config.TriggeredScripts == nil {
+		config.TriggeredScripts = make(map[string]TriggeredScripts)
+	}
+	config.TriggeredScripts[path] = TriggeredScripts{
+		Path:        path,
+		FuncName:    cmd,
+		TriggerType: triggerType,
+	}
+}
+
+func (config *TomlConfig) deleteTriggeredScript(name string) {
+	if config.TriggeredScripts == nil {
+		return
+	}
+
+	delete(config.TriggeredScripts, name)
+}
+
 type AppConfig struct {
 	Ircd map[string]TomlConfig `toml:"ircd"`
 }
 
 type OllamaRequestOptions struct {
-	Temperature float64 `json:"temperature"`
+	Mirostat      int     `json:"mirostat"`
+	MirostatEta   float64 `json:"mirostat_eta"`
+	MirostatTau   float64 `json:"mirostat_tau"`
+	NumCtx        int     `json:"num_ctx"`
+	RepeatLastN   int     `json:"repeat_last_n"`
+	RepeatPenalty float64 `json:"repeat_penalty"`
+	Temperature   float64 `json:"temperature"`
+	Seed          int     `json:"seed"`
+	NumPredict    int     `json:"num_predict"`
+	TopK          int32   `json:"top_k"`
+	TopP          float32 `json:"top_p"`
+	MinP          float64 `json:"min_p"`
 }
 
 type OllamaChatResponse struct {
@@ -175,6 +223,7 @@ type OllamaChatRequest struct {
 	Stream    bool                 `json:"stream"`
 	KeepAlive time.Duration        `json:"keep_alive"`
 	Options   OllamaRequestOptions `json:"options"`
+	System    string               `json:"system"`
 	Messages  []MemoryElement      `json:"messages"`
 }
 

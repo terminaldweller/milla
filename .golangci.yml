@@ -28,3 +28,4 @@ linters-settings:
         - gitlab.com/megalithic-llc/gluasocket
         - github.com/layeh/gopher-json
         - github.com/mmcdole/gofeed
+        - github.com/cenkalti/backoff/v5

@@ -218,10 +218,39 @@ func registerLuaCommand(luaState *lua.LState, appConfig *TomlConfig) func(*lua.L
 	}
 }
 
+func registerTriggeredScript(luaState *lua.LState, appConfig *TomlConfig) func(*lua.LState) int {
+	return func(luaState *lua.LState) int {
+		path := luaState.CheckString(1)
+		funcName := luaState.CheckString(3)       //nolint: mnd,gomnd
+		eventTypesTable := luaState.CheckTable(2) //nolint: mnd,gomnd
+
+		_, ok := appConfig.TriggeredScripts[path]
+		if ok {
+			log.Print("triggered script already registered: ", path)
+
+			return 0
+		}
+
+		var eventTypes []string
+
+		eventTypesTable.ForEach(func(_, value lua.LValue) {
+			if value.Type() != lua.LTString {
+				log.Print("event type for TriggeredScripts must be a string")
+			} else {
+				eventTypes = append(eventTypes, value.String())
+			}
+		})
+
+		appConfig.insertTriggeredScript(path, funcName, eventTypes)
+
+		return 0
+	}
+}
+
 func ircJoinChannelClosure(luaState *lua.LState, client *girc.Client) func(*lua.LState) int {
 	return func(luaState *lua.LState) int {
 		channel := luaState.CheckString(1)
-		password := luaState.CheckString(2)
+		password := luaState.CheckString(2) //nolint: mnd,gomnd
 
 		if password != "" {
 			client.Cmd.JoinKey(channel, password)
@@ -261,8 +290,9 @@ func orRequestClosure(luaState *lua.LState, appConfig *TomlConfig) func(*lua.LSt
 func ollamaRequestClosure(luaState *lua.LState, appConfig *TomlConfig) func(*lua.LState) int {
 	return func(luaState *lua.LState) int {
 		prompt := luaState.CheckString(1)
+		systemPrompt := luaState.CheckString(2) //nolint: mnd,gomnd
 
-		result, err := DoOllamaRequest(appConfig, &[]MemoryElement{}, prompt)
+		result, err := DoOllamaRequest(appConfig, &[]MemoryElement{}, prompt, systemPrompt)
 		if err != nil {
 			LogError(err)
 		}
@@ -276,8 +306,9 @@ func ollamaRequestClosure(luaState *lua.LState, appConfig *TomlConfig) func(*lua
 func geminiRequestClosure(luaState *lua.LState, appConfig *TomlConfig) func(*lua.LState) int {
 	return func(luaState *lua.LState) int {
 		prompt := luaState.CheckString(1)
+		systemPrompt := luaState.CheckString(2) //nolint: mnd,gomnd
 
-		result, err := DoGeminiRequest(appConfig, &[]*genai.Content{}, prompt)
+		result, err := DoGeminiRequest(appConfig, &[]*genai.Content{}, prompt, systemPrompt)
 		if err != nil {
 			LogError(err)
 		}
@@ -291,8 +322,9 @@ func geminiRequestClosure(luaState *lua.LState, appConfig *TomlConfig) func(*lua
 func chatGPTRequestClosure(luaState *lua.LState, appConfig *TomlConfig) func(*lua.LState) int {
 	return func(luaState *lua.LState) int {
 		prompt := luaState.CheckString(1)
+		systemPrompt := luaState.CheckString(2) //nolint: mnd,gomnd
 
-		result, err := DoChatGPTRequest(appConfig, &[]openai.ChatCompletionMessage{}, prompt)
+		result, err := DoChatGPTRequest(appConfig, &[]openai.ChatCompletionMessage{}, prompt, systemPrompt)
 		if err != nil {
 			LogError(err)
 		}
@@ -341,6 +373,7 @@ func urlEncode(luaState *lua.LState) func(*lua.LState) int {
 		URL := luaState.CheckString(1)
 		escapedURL := url.QueryEscape(URL)
 		luaState.Push(lua.LString(escapedURL))
+
 		return 1
 	}
 }
@@ -364,6 +397,9 @@ func millaModuleLoaderClosure(luaState *lua.LState, client *girc.Client, appConf
 		registerStructAsLuaMetaTable[TomlConfig](luaState, millaModule, checkStruct, TomlConfig{}, "toml_config")
 		registerStructAsLuaMetaTable[CustomCommand](luaState, millaModule, checkStruct, CustomCommand{}, "custom_command")
 		registerStructAsLuaMetaTable[LogModel](luaState, millaModule, checkStruct, LogModel{}, "log_model")
+		registerStructAsLuaMetaTable[girc.Source](luaState, millaModule, checkStruct, girc.Source{}, "girc_source")
+		// FIXME: throws error
+		// registerStructAsLuaMetaTable[girc.Tags](luaState, millaModule, checkStruct, girc.Tags{}, "girc_tags")
 		registerStructAsLuaMetaTable[girc.Event](luaState, millaModule, checkStruct, girc.Event{}, "girc_event")
 
 		luaState.SetGlobal("milla", millaModule)
@@ -411,6 +447,7 @@ func RunScript(scriptPath string, client *girc.Client, appConfig *TomlConfig) {
 		if err != nil {
 			LogError(err)
 		}
+
 		proxyTransport.Proxy = http.ProxyURL(proxyURL)
 	}
 
@@ -477,6 +514,7 @@ func RunLuaFunc(
 		if err != nil {
 			LogError(err)
 		}
+
 		proxyTransport.Proxy = http.ProxyURL(proxyURL)
 	}
 
@@ -498,6 +536,7 @@ func RunLuaFunc(
 
 	log.Print(cmd)
 	log.Print(args)
+
 	if err := luaState.CallByParam(funcLValue, lua.LString(args)); err != nil {
 		log.Print("failed running lua command ...")
 		LogError(err)
@@ -509,4 +548,95 @@ func RunLuaFunc(
 	luaState.Pop(1)
 
 	return result.String()
+}
+
+func RunTriggeredLuaFunc(
+	funcName, scriptPath string,
+	client *girc.Client,
+	event girc.Event,
+	appConfig *TomlConfig,
+) string {
+	luaState := lua.NewState()
+	defer luaState.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	luaState.SetContext(ctx)
+
+	appConfig.insertLState(scriptPath, luaState, cancel)
+
+	luaState.PreloadModule("milla", millaModuleLoaderClosure(luaState, client, appConfig))
+	gluasocket.Preload(luaState)
+	gluaxmlpath.Preload(luaState)
+	luaState.PreloadModule("yaml", gluayaml.Loader)
+	luaState.PreloadModule("re", gluare.Loader)
+	luaState.PreloadModule("json", gopherjson.Loader)
+
+	var proxyString string
+	if os.Getenv("ALL_PROXY") != "" {
+		proxyString = os.Getenv("ALL_PROXY")
+	} else if os.Getenv("HTTPS_PROXY") != "" {
+		proxyString = os.Getenv("HTTPS_PROXY")
+	} else if os.Getenv("HTTP_PROXY") != "" {
+		proxyString = os.Getenv("HTTP_PROXY")
+	} else if os.Getenv("https_proxy") != "" {
+		proxyString = os.Getenv("https_proxy")
+	} else if os.Getenv("http_proxy") != "" {
+		proxyString = os.Getenv("http_proxy")
+	}
+
+	log.Print("set proxy env to:", proxyString)
+
+	proxyTransport := &http.Transport{}
+
+	if proxyString != "" {
+		proxyURL, err := url.Parse(proxyString)
+		if err != nil {
+			LogError(err)
+		}
+
+		proxyTransport.Proxy = http.ProxyURL(proxyURL)
+	}
+
+	luaState.PreloadModule("http", gluahttp.NewHttpModule(&http.Client{Transport: proxyTransport}).Loader)
+
+	log.Print("Running lua command script: ", scriptPath)
+
+	if err := luaState.DoFile(scriptPath); err != nil {
+		LogError(err)
+
+		return ""
+	}
+
+	funcLValue := lua.P{
+		Fn:      luaState.GetGlobal(funcName),
+		NRet:    1,
+		Protect: true,
+	}
+
+	if err := luaState.CallByParam(funcLValue); err != nil {
+		log.Print("failed running lua command ...")
+		LogError(err)
+
+		return ""
+	}
+
+	result := luaState.Get(-1)
+	luaState.Pop(1)
+
+	return result.String()
+}
+
+func registerTriggeredScripts(irc *girc.Client, appConfig TomlConfig) {
+	for _, triggeredScript := range appConfig.TriggeredScripts {
+		for _, triggerType := range triggeredScript.TriggerType {
+			switch triggerType {
+			case girc.PRIVMSG:
+				irc.Handlers.AddBg(girc.PRIVMSG, func(_ *girc.Client, event girc.Event) {
+					RunTriggeredLuaFunc(triggeredScript.FuncName, triggeredScript.Path, irc, event, &appConfig)
+				})
+			default:
+			}
+		}
+	}
 }

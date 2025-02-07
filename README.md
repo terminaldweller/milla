@@ -25,259 +25,68 @@ The bot will see a chat prompt as a command if the message begins with `botnick:
 
 An example is provided under `config-example.toml`. Please note that all the config options are specific to one instance which is defined by `ircd.nameofyourinstance`.<br/>
 
-#### ircServer
-
-The address for the IRC server to connect to.
-
-#### ircNick
-
-The nick the bot should use.
-
-#### enableSasl
-
-Whether to use SASL for authentication.
-
-#### ircSaslUser
-
-The SASL username.
-
-#### ircSaslPass
-
-The SASL password for SASL plain authentication. Can also be passed as and environment variable.
-
-#### Endpoint
-
-The address for the Ollama chat endpoint.
-
-#### model
-
-The name of the model to use.
-
-#### chromaStyle
-
-The style to use for syntax highlighting done by [chroma](https://github.com/alecthomas/chroma). This is basically what's called a "theme".
-
-#### chromaFormatter
-
-The formatter to use. This tells chroma how to generate the color in the output. The supported options are:
-
-- `noop` for no syntax highlighting
-- `terminal` for 8-color terminals
-- `terminal8` for 8-color terminals
-- `terminal16` for 16-color terminals
-- `terminal256` for 256-color terminals
-- `terminal16m` for truecolor terminals
-- `html` for HTML output
-
-**_NOTE_**: please note that the terminal formatters will increase the size of the IRC event. Depending on the IRC server, this may or may not be a problem.
-
-#### provider
-
-Which LLM provider to use. The supported options are:
-
-- [ollama](https://github.com/ollama/ollama)
-- chatgpt
-- gemini
-- [openrouter](https://openrouter.ai/)
-
-#### apikey
-
-The apikey to use for the LLM provider. Can also be passed as and environment variable.
-
-#### ollamaSystem
-
-The system message to use for ollama.
-
-#### clientCertPath
-
-The path to the client certificate to use for client cert authentication.
-
-#### serverPass
-
-The password to use for the IRC server the bot is trying to connect to if the server has a password. Can also be passed as and environment variable.
-
-#### bind
-
-Which address to bind to for the IRC server.
-
-#### temp
-
-The temperature to config the model with.
-
-#### requestTimeout
-
-The timeout for requests made to the LLM provider.
-
-#### millaReconnectDelay
-
-How much to wait before reconnecting to the IRC server.
-
-#### ircPort
-
-Which port to connect to for the IRC server.
-
-#### keepAlive
-
-#### memoryLimit
-
-How many conversations to keep in memory for a model.
-
-#### pingDelay
-
-Ping delay for the IRC server.
-
-#### pingTimeout
-
-Ping timeout for the IRC server.
-
-#### topP
-
-set the Top_p paramater
-
-#### topK
-
-set the Top_k parameter
-
-#### skipTLSVerify
-
-Skip verifying the IRC server's TLS certificate. This only makes sense if you are trying to connect to an IRC server with a self-signed certificate.
-
-#### useTLS
-
-Whether to use TLS to connect to the IRC server. This option is provided to support usage on overlay networks such as Tor, i2p and [yggdrassil](https://github.com/yggdrasil-network/yggdrasil-go).
-
-#### disableSTSFallback
-
-Disables the "fallback" to a non-TLS connection if the strict transport policy expires and the first attempt to reconnect back to the TLS version fails.
-
-#### allowFlood
-
-Disable [girc](https://github.com/lrstanley/girc)'s built-in flood protection.
-
-#### debug
-
-Whether to enable debug logging. The logs are written to stdout.
-
-#### out
-
-Whether to write raw messages to stdout.
-
-#### admins
-
-List of admins for the bot. Only admins can use commands.
-
-```
-admins = ["admin1", "admin2"]
-```
-
-#### ircChannels
-
-List of channels for the bot to join when it connects to the server.
-
-```
-ircChannels = [["#channel1","channel1password"], ["#channel2",""], ["#channel3"]]
-```
-
-In the provided example, milla will attempt to join `#channel1` with the provided password while for the other two channels, it will try to join normally.<br/>
-This behaviour is consistant across all places where a channel name is the input.<br/>
-
-Please note that the bot does not have to join a channel to be usable. One can simply query the bot directly as well.<br/>
-
-#### databaseUser
-
-Name of the database user.
-
-#### databasePassword
-
-Password for the database user.
-
-#### databaseAddress
-
-Address of the database.
-
-#### databaseName
-
-Name of the database.
-
-#### scrapeChannels
-
-List of channels that the bot will scrape into a database table. You can later on use these databases for the custom commands.<br/>
-
-```
-ircChannels = [["#channel1","channel1password"], ["#channel2",""], ["#channel3"]]
-```
-
-#### ircProxy
-
-Determines which proxy to use to connect to the IRC network:
-
-```
-ircProxy = "socks5://127.0.0.1:9050"
-```
-
-#### llmProxy
-
-Determines which proxy to use to connect to the LLM endpoint:
-
-```
-llmProxy = "socks5://127.0.0.1:9050"
-```
-
-#### generalProxy
-
-Determines which proxy to use for other things:
-
-```
-llmProxy = "socks5://127.0.0.1:9050"
-```
-
-#### ircdName
-
-Name of the milla instance, must be unique across all instances.
-
-#### adminOnly
-
-Milla will only answer if the nick is in the admin list.
-
-#### webIRCGateway
-
-webirc gateway to use.
-
-#### webIRCHostname
-
-webirc hostname to use.
-
-#### webIRCPassword
-
-webirc password to use.
-
-#### webIRCAddress
-
-webirc address to use.
-
-#### context
-
-the context to use for the normal conversations with the bot. Yes, this is how you tell your milla instance to act like a pirate.
-
-```toml
-context = ["you are a pirate. use the language and words a pirate would unless you are asked to do otherwise explicitly", "your name is caption blackbeard"]
-```
-
-```toml
-context = ["please respond in french even if i use another language unless you are specifically asked to use any language other than french", "your name is terra"]
-```
-
-#### rssFile
-
-The file that contains the rss feeeds.
-
-#### channel
-
-The channel to send the rss feeds to.
-
-### plugins
-
-A list of plugins to load:`plugins = ["./plugins/rss.lua", "./plugins/test.lua"]`
+| Option              | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ircServer           | The address for the IRC server to connect to                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ircNick             | The nick the bot should use                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| enableSasl          | Whether to use SASL for authentication                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ircSaslUser         | The SASL username                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ircSaslPass         | The SASL password for SASL plain authentication. Can also be passed as and environment variable                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Endpoint            | The address for the Ollama chat endpoint                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| model               | The name of the model to use                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| chromaStyle         | The style to use for syntax highlighting done by [chroma](https://github.com/alecthomas/chroma). This is basically what's called a "theme"                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| chromaFormatter     | The formatter to use. This tells chroma how to generate the color in the output. The supported options are:<br><br>- `noop` for no syntax highlighting<br>- `terminal` for 8-color terminals<br>- `terminal8` for 8-color terminals<br>- `terminal16` for 16-color terminals<br>- `terminal256` for 256-color terminals<br>- `terminal16m` for truecolor terminals<br>- `html` for HTML output<br><br>**_NOTE_**: please note that the terminal formatters will increase the size of the IRC event. Depending on the IRC server, this may or may not be a problem.              |
+| provider            | Which LLM provider to use. The supported options are:<br><br>- [ollama](https://github.com/ollama/ollama)<br>- chatgpt<br>- gemini<br>- [openrouter](https://openrouter.ai/)<br>                                                                                                                                                                                                                                                                                                                                                                                                |
+| apikey              | The apikey to use for the LLM provider. Can also be passed as and environment variable                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| clientCertPath      | The path to the client certificate to use for client cert authentication                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| serverPass          | The password to use for the IRC server the bot is trying to connect to if the server has a password. Can also be passed as and environment variable                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| bind                | Which address to bind to for the IRC server                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| requestTimeout      | The timeout for requests made to the LLM provider                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| millaReconnectDelay | How much to wait before reconnecting to the IRC server                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ircPort             | Which port to connect to for the IRC server                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| keepAlive           |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| memoryLimit         | How many conversations to keep in memory for a model                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| pingDelay           | Ping delay for the IRC server                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| pingTimeout         | Ping timeout for the IRC server                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| skipTLSVerify       | Skip verifying the IRC server's TLS certificate. This only makes sense if you are trying to connect to an IRC server with a self-signed certificate                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| useTLS              | Whether to use TLS to connect to the IRC server. This option is provided to support usage on overlay networks such as Tor, i2p and [yggdrassil](https://github.com/yggdrasil-network/yggdrasil-go)                                                                                                                                                                                                                                                                                                                                                                              |
+| disableSTSFallback  | Disables the "fallback" to a non-TLS connection if the strict transport policy expires and the first attempt to reconnect back to the TLS version fails                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| allowFlood          | Disable [girc](https://github.com/lrstanley/girc)'s built-in flood protection                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| debug               | Whether to enable debug logging. The logs are written to stdout                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| out                 | Whether to write raw messages to stdout                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| admins              | List of admins for the bot. Only admins can use commands.<br><br>`admins = ["admin1", "admin2"]`<br>                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ircChannels         | List of channels for the bot to join when it connects to the server.<br>`ircChannels = [["#channel1","channel1password"], ["#channel2",""], ["#channel3"]]`<br>In the provided example, milla will attempt to join `#channel1` with the provided password while for the other two channels, it will try to join normally.<br><br>**_NOTE 1_**: This behaviour is consistant across all places where a channel name is the input.<br><br>**_NOTE 2_**: Please note that the bot does not have to join a channel to be usable. One can simply query the bot directly as well.<br> |
+| databaseUser        | Name of the database user                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| databasePassword    | Password for the database user                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| databaseAddress     | Address of the database                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| databaseName        | Name of the database                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| scrapeChannels      | List of channels that the bot will scrape into a database table. You can later on use these databases for the custom commands.<br><br>`ircChannels = [["#channel1","channel1password"], ["#channel2",""], ["#channel3"]]`                                                                                                                                                                                                                                                                                                                                                       |
+| ircProxy            | Determines which proxy to use to connect to the IRC network:<br>`ircProxy = "socks5://127.0.0.1:9050"`                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| llmProxy            | Determines which proxy to use to connect to the LLM endpoint:<br>`llmProxy = "socks5://127.0.0.1:9050"`                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| generalProxy        | Determines which proxy to use for other things:<br>`llmProxy = "socks5://127.0.0.1:9050"`<br><br>**_NOTE_**: Lua scripts do not use the `generalProxy` option. They will use whatever proxy that the invidividual script has them use. The RSS functionaly lets you use a proxy for every single entry.                                                                                                                                                                                                                                                                         |
+| ircdName            | Name of the milla instance, must be unique across all instances                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| adminOnly           | Milla will only answer if the nick is in the admin list                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| webIRCGateway       | webirc gateway to use                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| webIRCHostname      | webirc hostname to use                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| webIRCPassword      | webirc password to use                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| webIRCAddress       | webirc address to use                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| context             | Artificially provide a history of messages for the bot.<br><br>`tomlcontext = ["you are a pirate. use the language and words a pirate would unless you are asked to do otherwise explicitly", "your name is caption blackbeard"]`<br>`tomlcontext = ["please respond in french even if i use another language unless you are specifically asked to use any language other than french", "your name is terra"]`                                                                                                                                                                  |
+| rssFile             | The file that contains the rss feeeds                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| channel             | The channel to send the rss feeds to                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| plugins             | A list of plugins to load:`plugins = ["./plugins/rss.lua", "./plugins/test.lua"]`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| systemPrompt        | The system prompt for the AI chat bot                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| temperature         | [ollama docs](https://github.com/ollama/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values)                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| topP                | [ollama docs](https://github.com/ollama/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values)                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| topK                | [ollama docs](https://github.com/ollama/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values)                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ollamaMirostat      | [ollama docs](https://github.com/ollama/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values)                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ollamaMirostatEta   | [ollama docs](https://github.com/ollama/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values)                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ollamaMirostatTau   | [ollama docs](https://github.com/ollama/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values)                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ollamaNumCtx        | [ollama docs](https://github.com/ollama/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values)                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ollamaRepeatLastN   | [ollama docs](https://github.com/ollama/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values)                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ollamaRepeatPenalty | [ollama docs](https://github.com/ollama/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values)                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ollamaSeed          | [ollama docs](https://github.com/ollama/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values)                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ollamaNumPredict    | [ollama docs](https://github.com/ollama/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values)                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ollamaMinp          | [ollama docs](https://github.com/ollama/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values)                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 ## Custom Commands
 
@@ -287,25 +96,29 @@ Custom commands let you define a command that does a SQL query to the database a
 [ircd.devinet_terra.customCommands.digest]
 sql = "select log from liberanet_milla_us_market_news order by log desc;"
 limit = 300
-context = ["you are a sentiment-analysis bot"]
+context = ["",""]
+systemPrompt = ["you are a sentiment analysis bot."]
 prompt= "i have provided to you news headlines in the form of previous conversations between you and me using the user role. please provide the digest of the news for me."
 [ircd.devinet_terra.customCommands.summarize]
 sql= "select log from liberanet_milla_us_market_news order by log desc;"
 limit= 300
-context = ["you are a sentiment-analysis bot"]
+systemPrompt = ["you are a sentiment-analysis bot"]
 prompt= "i have provided to you news headlines in the form of previous conversations between you and me using the user role. please summarize the provided news for me. provide some details."
 [ircd.devinet_terra.customCommands.canada]
 sql= "select log from liberanet_milla_us_market_news order by log desc;"
 limit= 300
-context = ["you are a canadian news anchor", "you only care about news that is relevant to canada"]
 prompt= "i have provided to you news headlines in the form of previous conversations between you and me using the user role. please summarize the provided news for me. provide some details."
 ```
 
-In the above example digest and summarize will be the names of the commands: `milla: /cmd summarize`.<br/>
-Currently you should only ask for the log column in the query. Asking for the other column will result in the query not succeeding.<br/>
-The `limit` parameter limits the number of SQL queries that are used to generate the response. Whether you hit the token limit of the provider you use and the cost is something you should be aware of.<br/>
-A `limit` value of 0 disables the limit on the amount of rows that are passed to milla.<br/>
-NOTE: since each milla instance can have its own database, all instances might not necessarily have access to all the data milla is gathering. If you use the same database for all the instances, all instances will have access to all the gathered data.<br/>
+In the above example digest and summarize will be the names of the commands: `milla: /cmd summarize`.
+
+Currently you should only ask for the log column in the query. Asking for the other column will result in the query not succeeding.
+
+The `limit` parameter limits the number of SQL queries that are used to generate the response. Whether you hit the token limit of the provider you use and the cost is something you should be aware of.
+
+A `limit` value of 0 disables the limit on the amount of rows that are passed to milla.
+
+**_NOTE_**: since each milla instance can have its own database, all instances might not necessarily have access to all the data milla is gathering. If you use the same database for all the instances, all instances will have access to all the gathered data.
 
 ## Watchlist
 
@@ -383,7 +196,7 @@ skipTLSVerify = false
 useTLS = true
 adminOnly = false
 plugins = ["/plugins/ip.lua", "/plugins/urban.lua"]
-context = ["please respond in french even if i use another language unless you are specifically asked to use any language other than french"]
+systemPrompt = ["please respond in french even if i use another language unless you are specifically asked to use any language other than french"]
 [ircd.devinet.watchlist.security]
 watchList = [["#securityfeeds"]]
 watchFiles = ["/watchfiles/voidbox.list"]
@@ -428,65 +241,31 @@ adminOnly = true
 [ircd.liberanet.customCommands.digest]
 sql = "select log from liberanet_milla_us_market_news order by log desc;"
 limit = 300
-context = ["you are a sentiment-analysis bot"]
+systemPrompt = ["you are a sentiment-analysis bot"]
 prompt= "i have provided to you news headlines in the form of previous conversations between you and me using the user role. please provide the digest of the news for me."
 [ircd.liberanet.customCommands.summarize]
 sql= "select log from liberanet_milla_us_market_news order by log desc;"
 limit= 300
-context = ["you are a sentiment-analysis bot"]
+systemPrompt = ["you are a sentiment-analysis bot"]
 prompt= "i have provided to you news headlines in the form of previous conversations between you and me using the user role. please summarize the provided news for me. provide some details."
 ```
 
 ## Commands
 
-#### help
-
-Prints the help message.
-
-#### get
-
-Get the value of a config option. Use the same name as the config file but capitalized: `/get chromaFormatter`
-
-#### getall
-
-Get the value of all config options.
-
-#### set
-
-Set a config option on the fly. Use the same name as the config file but capitalized: `/set chromaFormatter noop`
-
-#### memstats
-
-Returns memory stats for milla.
-
-#### join
-
-Joins a channel: `/join #channel [optional_password]`
-
-#### leave
-
-Leaves a channel: `/leave #channel`
-
-#### load
-
-Load a plugin: `/load /plugins/rss.lua`
-
-#### unload
-
-Unload a plugin: `/unload /plugins/rss.lua`
-
-#### remind
-
-Pings the user after the given amount in seconds: `/remind 1200`
-
-#### roll
-
-Rolls a number between 1 and 6 if no arguments are given. With one argument it rolls a number between 1 and the given number. With two arguments it rolls a number between the two numbers: `/rool 10000 66666`
-
-#### whois
-
-IANA whois endpoint query: `milla: /whois xyz`
-This command uses the `generalProxy` option.
+| Command  | Description                                                                                                                                                                                                     |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| help     | Prints the help message                                                                                                                                                                                         |
+| get      | Get the value of a config option. Use the same name as the config file but capitalized: `/get chromaFormatter`                                                                                                  |
+| getall   | Get the value of all config options                                                                                                                                                                             |
+| set      | Set a config option on the fly. Use the same name as the config file but capitalized: `/set chromaFormatter noop`                                                                                               |
+| memstats | Returns memory stats for milla                                                                                                                                                                                  |
+| join     | Joins a channel: `/join #channel [optional_password]`                                                                                                                                                           |
+| leave    | Leaves a channel: `/leave #channel`                                                                                                                                                                             |
+| load     | Load a plugin: `/load /plugins/rss.lua`                                                                                                                                                                         |
+| unload   | Unload a plugin: `/unload /plugins/rss.lua`                                                                                                                                                                     |
+| remind   | Pings the user after the given amount in seconds: `/remind 1200`                                                                                                                                                |
+| roll     | Rolls a number between 1 and 6 if no arguments are given. With one argument it rolls a number between 1 and the given number. With two arguments it rolls a number between the two numbers: `/roll 10000 66666` |
+| whois    | IANA whois endpoint query: `milla: /whois xyz`. This command uses the `generalProxy` option.                                                                                                                    |
 
 ## Deploy
 
@@ -754,19 +533,19 @@ milla.part_channel(channel)
 ```
 
 ```lua
-milla.send_ollama_request(prompt)
+milla.send_ollama_request(prompt, systemPrompt)
 ```
 
 ```lua
-milla.send_gemini_request(prompt)
+milla.send_gemini_request(prompt, systemPrompt)
 ```
 
 ```lua
-milla.send_chatgpt_request(prompt)
+milla.send_chatgpt_request(prompt, systemPrompt)
 ```
 
 ```lua
-milla.send_or_request(prompt)
+milla.send_or_request(prompt, systemPrompt)
 ```
 
 ```lua
@@ -849,7 +628,7 @@ ALL_PROXY=socks5://172.17.0.1:9050
 
 More of milla's functionality will be available through milla's lua module over time.<br/>
 
-The following libraries are loaded by milla by default:
+milla loads the following libraries by default:
 
 - [gluaxmlpath](https://github.com/ailncode/gluaxmlpath)
 - [gluahttp](https://github.com/cjoudrey/gluahttp)
