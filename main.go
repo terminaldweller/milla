@@ -47,108 +47,6 @@ var (
 	errUnsupportedType   = errors.New("unsupported type")
 )
 
-func addSaneDefaults(config *TomlConfig) {
-	if config.IrcNick == "" {
-		config.IrcNick = "milla"
-	}
-
-	if config.ChromaStyle == "" {
-		config.ChromaStyle = "rose-pine-moon"
-	}
-
-	if config.ChromaFormatter == "" {
-		config.ChromaFormatter = "noop"
-	}
-
-	if config.DatabaseAddress == "" {
-		config.DatabaseAddress = "postgres"
-	}
-
-	if config.DatabaseUser == "" {
-		config.DatabaseUser = "milla"
-	}
-
-	if config.DatabaseName == "" {
-		config.DatabaseName = "milladb"
-	}
-
-	if config.Temperature == 0 {
-		config.Temperature = 0.5
-	}
-
-	if config.RequestTimeout == 0 {
-		config.RequestTimeout = 10
-	}
-
-	if config.MillaReconnectDelay == 0 {
-		config.MillaReconnectDelay = 30
-	}
-
-	if config.IrcPort == 0 {
-		config.IrcPort = 6697
-	}
-
-	if config.KeepAlive == 0 {
-		config.KeepAlive = 600
-	}
-
-	if config.MemoryLimit == 0 {
-		config.MemoryLimit = 20
-	}
-
-	if config.PingDelay == 0 {
-		config.PingDelay = 20
-	}
-
-	if config.PingTimeout == 0 {
-		config.PingTimeout = 20
-	}
-
-	if config.OllamaMirostatEta == 0 {
-		config.OllamaMirostatEta = 0.1
-	}
-
-	if config.OllamaMirostatTau == 0 {
-		config.OllamaMirostatTau = 5.0
-	}
-
-	if config.OllamaNumCtx == 0 {
-		config.OllamaNumCtx = 4096
-	}
-
-	if config.OllamaRepeatLastN == 0 {
-		config.OllamaRepeatLastN = 64
-	}
-
-	if config.OllamaRepeatPenalty == 0 {
-		config.OllamaRepeatPenalty = 1.1
-	}
-
-	if config.OllamaSeed == 0 {
-		config.OllamaSeed = 42
-	}
-
-	if config.OllamaNumPredict == 0 {
-		config.OllamaNumPredict = -1
-	}
-
-	if config.TopK == 0 {
-		config.TopK = 40
-	}
-
-	if config.TopP == 0.0 {
-		config.TopP = 0.9
-	}
-
-	if config.OllamaMinP == 0 {
-		config.OllamaMinP = 0.05
-	}
-
-	if config.Temperature == 0 {
-		config.Temperature = 0.7
-	}
-}
-
 func getTableFromChanName(channel, ircdName string) string {
 	tableName := ircdName + "_" + channel
 	tableName = strings.ReplaceAll(tableName, "#", "")
@@ -1221,7 +1119,14 @@ func connectToDB(appConfig *TomlConfig, ctx *context.Context, irc *girc.Client) 
 		return pgxpool.NewWithConfig(*ctx, poolConfig)
 	}
 
-	pool, err = backoff.Retry(*ctx, dbConnect, backoff.WithBackOff(backoff.NewExponentialBackOff()))
+	expBackoff := backoff.WithBackOff(&backoff.ExponentialBackOff{
+		InitialInterval:     time.Millisecond * time.Duration(appConfig.DbBackOffInitialInterval),
+		RandomizationFactor: appConfig.DbBackOffRandomizationFactor,
+		Multiplier:          appConfig.DbBackOffMultiplier,
+		MaxInterval:         time.Second * time.Duration(appConfig.DbBackOffMaxInterval),
+	})
+
+	pool, err = backoff.Retry(*ctx, dbConnect, expBackoff)
 	if err != nil {
 		LogError(err)
 	}
@@ -1542,7 +1447,14 @@ func runIRC(appConfig TomlConfig) {
 	defer cancel()
 
 	for {
-		_, err := backoff.Retry(ctx, connectToIRC, backoff.WithBackOff(backoff.NewExponentialBackOff()))
+		expBackoff := backoff.WithBackOff(&backoff.ExponentialBackOff{
+			InitialInterval:     time.Millisecond * time.Duration(appConfig.IrcBackOffInitialInterval),
+			RandomizationFactor: appConfig.IrcBackOffRandomizationFactor,
+			Multiplier:          appConfig.IrcBackOffMultiplier,
+			MaxInterval:         time.Second * time.Duration(appConfig.IrcBackOffMaxInterval),
+		})
+
+		_, err := backoff.Retry(ctx, connectToIRC, expBackoff)
 		if err != nil {
 			LogError(err)
 		} else {
@@ -1578,7 +1490,7 @@ func main() {
 	}
 
 	for key, value := range config.Ircd {
-		addSaneDefaults(&value)
+		AddSaneDefaults(&value)
 		value.IRCDName = key
 		config.Ircd[key] = value
 	}

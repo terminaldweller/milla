@@ -19,6 +19,12 @@ type LogModel struct {
 	// DateAdded pgtype.Date `db:"dateadded"`
 }
 
+type PluginType struct {
+	Name    string     `toml:"name"`
+	Path    string     `toml:"path"`
+	EnvVars [][]string `toml:"envVars"`
+}
+
 type CustomCommand struct {
 	SQL          string   `toml:"sql"`
 	Limit        int      `toml:"limit"`
@@ -60,74 +66,82 @@ type RssFile struct {
 }
 
 type TomlConfig struct {
-	IrcServer           string                   `toml:"ircServer"`
-	IrcNick             string                   `toml:"ircNick"`
-	IrcSaslUser         string                   `toml:"ircSaslUser"`
-	IrcSaslPass         string                   `toml:"ircSaslPass"`
-	Endpoint            string                   `toml:"endpoint"`
-	Model               string                   `toml:"model"`
-	ChromaStyle         string                   `toml:"chromaStyle"`
-	ChromaFormatter     string                   `toml:"chromaFormatter"`
-	Provider            string                   `toml:"provider"`
-	Apikey              string                   `toml:"apikey"`
-	ClientCertPath      string                   `toml:"clientCertPath"`
-	ServerPass          string                   `toml:"serverPass"`
-	Bind                string                   `toml:"bind"`
-	Name                string                   `toml:"name"`
-	DatabaseAddress     string                   `toml:"databaseAddress"`
-	DatabasePassword    string                   `toml:"databasePassword"`
-	DatabaseUser        string                   `toml:"databaseUser"`
-	DatabaseName        string                   `toml:"databaseName"`
-	LLMProxy            string                   `toml:"llmProxy"`
-	IRCProxy            string                   `toml:"ircProxy"`
-	GeneralProxy        string                   `toml:"generalProxy"`
-	IRCDName            string                   `toml:"ircdName"`
-	WebIRCPassword      string                   `toml:"webIRCPassword"`
-	WebIRCGateway       string                   `toml:"webIRCGateway"`
-	WebIRCHostname      string                   `toml:"webIRCHostname"`
-	WebIRCAddress       string                   `toml:"webIRCAddress"`
-	RSSFile             string                   `toml:"rssFile"`
-	AnthropicVersion    string                   `toml:"anthropicVersion"`
-	Plugins             []string                 `toml:"plugins"`
-	Context             []string                 `toml:"context"`
-	SystemPrompt        string                   `toml:"systemPrompt"`
-	CustomCommands      map[string]CustomCommand `toml:"customCommands"`
-	WatchLists          map[string]WatchList     `toml:"watchList"`
-	LuaStates           map[string]LuaLstates
-	LuaCommands         map[string]LuaCommand
-	TriggeredScripts    map[string]TriggeredScripts
-	Rss                 map[string]RssFile `toml:"rss"`
-	RequestTimeout      int                `toml:"requestTimeout"`
-	MillaReconnectDelay int                `toml:"millaReconnectDelay"`
-	IrcPort             int                `toml:"ircPort"`
-	KeepAlive           int                `toml:"keepAlive"`
-	MemoryLimit         int                `toml:"memoryLimit"`
-	PingDelay           int                `toml:"pingDelay"`
-	PingTimeout         int                `toml:"pingTimeout"`
-	OllamaMirostat      int                `json:"ollamaMirostat"`
-	OllamaMirostatEta   float64            `json:"ollamaMirostatEta"`
-	OllamaMirostatTau   float64            `json:"ollamaMirostatTau"`
-	OllamaNumCtx        int                `json:"ollamaNumCtx"`
-	OllamaRepeatLastN   int                `json:"ollamaRepeatLastN"`
-	OllamaRepeatPenalty float64            `json:"ollamaRepeatPenalty"`
-	Temperature         float64            `json:"temperature"`
-	OllamaSeed          int                `json:"ollamaSeed"`
-	OllamaNumPredict    int                `json:"ollamaNumPredict"`
-	OllamaMinP          float64            `json:"ollamaMinP"`
-	TopP                float32            `toml:"topP"`
-	TopK                int32              `toml:"topK"`
-	EnableSasl          bool               `toml:"enableSasl"`
-	SkipTLSVerify       bool               `toml:"skipTLSVerify"`
-	UseTLS              bool               `toml:"useTLS"`
-	DisableSTSFallback  bool               `toml:"disableSTSFallback"`
-	AllowFlood          bool               `toml:"allowFlood"`
-	Debug               bool               `toml:"debug"`
-	Out                 bool               `toml:"out"`
-	AdminOnly           bool               `toml:"adminOnly"`
-	pool                *pgxpool.Pool
-	Admins              []string   `toml:"admins"`
-	IrcChannels         [][]string `toml:"ircChannels"`
-	ScrapeChannels      [][]string `toml:"scrapeChannels"`
+	IrcServer                     string                   `toml:"ircServer"`
+	IrcNick                       string                   `toml:"ircNick"`
+	IrcSaslUser                   string                   `toml:"ircSaslUser"`
+	IrcSaslPass                   string                   `toml:"ircSaslPass"`
+	Endpoint                      string                   `toml:"endpoint"`
+	Model                         string                   `toml:"model"`
+	ChromaStyle                   string                   `toml:"chromaStyle"`
+	ChromaFormatter               string                   `toml:"chromaFormatter"`
+	Provider                      string                   `toml:"provider"`
+	Apikey                        string                   `toml:"apikey"`
+	ClientCertPath                string                   `toml:"clientCertPath"`
+	ServerPass                    string                   `toml:"serverPass"`
+	Bind                          string                   `toml:"bind"`
+	Name                          string                   `toml:"name"`
+	DatabaseAddress               string                   `toml:"databaseAddress"`
+	DatabasePassword              string                   `toml:"databasePassword"`
+	DatabaseUser                  string                   `toml:"databaseUser"`
+	DatabaseName                  string                   `toml:"databaseName"`
+	LLMProxy                      string                   `toml:"llmProxy"`
+	IRCProxy                      string                   `toml:"ircProxy"`
+	GeneralProxy                  string                   `toml:"generalProxy"`
+	IRCDName                      string                   `toml:"ircdName"`
+	WebIRCPassword                string                   `toml:"webIRCPassword"`
+	WebIRCGateway                 string                   `toml:"webIRCGateway"`
+	WebIRCHostname                string                   `toml:"webIRCHostname"`
+	WebIRCAddress                 string                   `toml:"webIRCAddress"`
+	RSSFile                       string                   `toml:"rssFile"`
+	AnthropicVersion              string                   `toml:"anthropicVersion"`
+	Plugins                       []string                 `toml:"plugins"`
+	Context                       []string                 `toml:"context"`
+	SystemPrompt                  string                   `toml:"systemPrompt"`
+	CustomCommands                map[string]CustomCommand `toml:"customCommands"`
+	WatchLists                    map[string]WatchList     `toml:"watchList"`
+	LuaStates                     map[string]LuaLstates
+	LuaCommands                   map[string]LuaCommand
+	TriggeredScripts              map[string]TriggeredScripts
+	Rss                           map[string]RssFile `toml:"rss"`
+	RequestTimeout                int                `toml:"requestTimeout"`
+	MillaReconnectDelay           int                `toml:"millaReconnectDelay"`
+	IrcPort                       int                `toml:"ircPort"`
+	KeepAlive                     int                `toml:"keepAlive"`
+	MemoryLimit                   int                `toml:"memoryLimit"`
+	PingDelay                     int                `toml:"pingDelay"`
+	PingTimeout                   int                `toml:"pingTimeout"`
+	OllamaMirostat                int                `json:"ollamaMirostat"`
+	OllamaMirostatEta             float64            `json:"ollamaMirostatEta"`
+	OllamaMirostatTau             float64            `json:"ollamaMirostatTau"`
+	OllamaNumCtx                  int                `json:"ollamaNumCtx"`
+	OllamaRepeatLastN             int                `json:"ollamaRepeatLastN"`
+	OllamaRepeatPenalty           float64            `json:"ollamaRepeatPenalty"`
+	Temperature                   float64            `json:"temperature"`
+	OllamaSeed                    int                `json:"ollamaSeed"`
+	OllamaNumPredict              int                `json:"ollamaNumPredict"`
+	OllamaMinP                    float64            `json:"ollamaMinP"`
+	TopP                          float32            `toml:"topP"`
+	TopK                          int32              `toml:"topK"`
+	IrcBackOffInitialInterval     int                `toml:"ircBackOffInitialInterval"`
+	IrcBackOffRandomizationFactor float64            `toml:"ircbackOffRandomizationFactor"`
+	IrcBackOffMultiplier          float64            `toml:"ircBackOffMultiplier"`
+	IrcBackOffMaxInterval         int                `toml:"ircBackOffMaxInterval"`
+	DbBackOffInitialInterval      int                `toml:"dbBackOffInitialInterval"`
+	DbBackOffRandomizationFactor  float64            `toml:"dbBackOffRandomizationFactor"`
+	DbBackOffMultiplier           float64            `toml:"dbBackOffMultiplier"`
+	DbBackOffMaxInterval          int                `toml:"dbBackOffMaxInterval"`
+	EnableSasl                    bool               `toml:"enableSasl"`
+	SkipTLSVerify                 bool               `toml:"skipTLSVerify"`
+	UseTLS                        bool               `toml:"useTLS"`
+	DisableSTSFallback            bool               `toml:"disableSTSFallback"`
+	AllowFlood                    bool               `toml:"allowFlood"`
+	Debug                         bool               `toml:"debug"`
+	Out                           bool               `toml:"out"`
+	AdminOnly                     bool               `toml:"adminOnly"`
+	pool                          *pgxpool.Pool
+	Admins                        []string   `toml:"admins"`
+	IrcChannels                   [][]string `toml:"ircChannels"`
+	ScrapeChannels                [][]string `toml:"scrapeChannels"`
 }
 
 func (config *TomlConfig) insertLState(
