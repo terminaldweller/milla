@@ -65,7 +65,7 @@ func GetFeed(feed FeedConfig,
 
 			for _, item := range parsedFeed.Items {
 				if item.PublishedParsed.Unix() > newestFromDB {
-					client.Cmd.Message(channel[0], parsedFeed.Title+": "+item.Title+" >>> "+item.Link)
+					client.Cmd.Message(channel[0], feed.Name[0:Min(20, len(feed.Name))]+": "+parsedFeed.Title+": "+item.Title+" >>> "+item.Link)
 				}
 			}
 

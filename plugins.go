@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"strings"
 
 	"github.com/ailncode/gluaxmlpath"
 	"github.com/cjoudrey/gluahttp"
@@ -197,6 +198,17 @@ func sendMessageClosure(luaState *lua.LState, client *girc.Client) func(*lua.LSt
 		return 0
 	}
 }
+
+func replyToMessageClosure(luaStete *lua.LState, client *girc.Client, event girc.Event) func(*lua.LState) int {
+	return func(luaState *lua.LState) int {
+		message := luaState.CheckString(1)
+
+		client.Cmd.Message(event.Source.Name, message)
+
+		return 0
+	}
+}
+
 func registerLuaCommand(luaState *lua.LState, appConfig *TomlConfig) func(*lua.LState) int {
 	return func(luaState *lua.LState) int {
 		path := luaState.CheckString(1)
@@ -410,6 +422,37 @@ func millaModuleLoaderClosure(luaState *lua.LState, client *girc.Client, appConf
 	}
 }
 
+func millaModuleLoaderEventClosure(luaState *lua.LState, client *girc.Client, appConfig *TomlConfig, event girc.Event) func(*lua.LState) int {
+	return func(luaState *lua.LState) int {
+		exports := map[string]lua.LGFunction{
+			"send_message":         lua.LGFunction(sendMessageClosure(luaState, client)),
+			"reply_to":             lua.LGFunction(replyToMessageClosure(luaState, client, event)),
+			"join_channel":         lua.LGFunction(ircJoinChannelClosure(luaState, client)),
+			"part_channel":         lua.LGFunction(ircPartChannelClosure(luaState, client)),
+			"send_ollama_request":  lua.LGFunction(ollamaRequestClosure(luaState, appConfig)),
+			"send_gemini_request":  lua.LGFunction(geminiRequestClosure(luaState, appConfig)),
+			"send_chatgpt_request": lua.LGFunction(chatGPTRequestClosure(luaState, appConfig)),
+			"send_or_request":      lua.LGFunction(orRequestClosure(luaState, appConfig)),
+			"query_db":             lua.LGFunction(dbQueryClosure(luaState, appConfig)),
+			"register_cmd":         lua.LGFunction(registerLuaCommand(luaState, appConfig)),
+			"url_encode":           lua.LGFunction(urlEncode(luaState)),
+		}
+		millaModule := luaState.SetFuncs(luaState.NewTable(), exports)
+
+		registerStructAsLuaMetaTable[TomlConfig](luaState, millaModule, checkStruct, TomlConfig{}, "toml_config")
+		registerStructAsLuaMetaTable[CustomCommand](luaState, millaModule, checkStruct, CustomCommand{}, "custom_command")
+		registerStructAsLuaMetaTable[LogModel](luaState, millaModule, checkStruct, LogModel{}, "log_model")
+		registerStructAsLuaMetaTable[girc.Source](luaState, millaModule, checkStruct, girc.Source{}, "girc_source")
+		registerStructAsLuaMetaTable[girc.Event](luaState, millaModule, checkStruct, girc.Event{}, "girc_event")
+
+		luaState.SetGlobal("milla", millaModule)
+
+		luaState.Push(millaModule)
+
+		return 1
+	}
+}
+
 func RunScript(scriptPath string, client *girc.Client, appConfig *TomlConfig) {
 	luaState := lua.NewState()
 	defer luaState.Close()
@@ -466,6 +509,15 @@ func LoadAllPlugins(appConfig *TomlConfig, client *girc.Client) {
 		log.Print("Loading plugin: ", scriptPath)
 
 		go RunScript(scriptPath, client, appConfig)
+	}
+}
+
+func LoadAllEventPlugins(appConfig *TomlConfig, client *girc.Client) {
+	for _, triggeredScript := range appConfig.TriggeredScripts {
+		log.Print("Loading event plugin: ", triggeredScript.Path)
+
+		go RunScript(triggeredScript.Path, client, appConfig)
+		registerTriggeredScripts(client, *appConfig)
 	}
 }
 
@@ -565,7 +617,7 @@ func RunTriggeredLuaFunc(
 
 	appConfig.insertLState(scriptPath, luaState, cancel)
 
-	luaState.PreloadModule("milla", millaModuleLoaderClosure(luaState, client, appConfig))
+	luaState.PreloadModule("milla", millaModuleLoaderEventClosure(luaState, client, appConfig, event))
 	gluasocket.Preload(luaState)
 	gluaxmlpath.Preload(luaState)
 	luaState.PreloadModule("yaml", gluayaml.Loader)
@@ -629,10 +681,18 @@ func RunTriggeredLuaFunc(
 
 func registerTriggeredScripts(irc *girc.Client, appConfig TomlConfig) {
 	for _, triggeredScript := range appConfig.TriggeredScripts {
-		for _, triggerType := range triggeredScript.TriggerType {
+		for _, triggerType := range triggeredScript.TriggerTypes {
 			switch triggerType {
 			case girc.PRIVMSG:
 				irc.Handlers.AddBg(girc.PRIVMSG, func(_ *girc.Client, event girc.Event) {
+					if !strings.HasPrefix(event.Last(), appConfig.IrcNick+": ") {
+						return
+					}
+
+					if appConfig.AdminOnly && !isFromAdmin(appConfig.Admins, event) {
+						return
+					}
+
 					RunTriggeredLuaFunc(triggeredScript.FuncName, triggeredScript.Path, irc, event, &appConfig)
 				})
 			default:

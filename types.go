@@ -54,10 +54,10 @@ type LuaCommand struct {
 }
 
 type TriggeredScripts struct {
-	Path        string
-	FuncName    string
-	Channels    [][]string
-	TriggerType []string
+	Path         string
+	FuncName     string
+	Channels     [][]string
+	TriggerTypes []string
 }
 
 type RssFile struct {
@@ -190,9 +190,9 @@ func (config *TomlConfig) insertTriggeredScript(path, cmd string, triggerType []
 		config.TriggeredScripts = make(map[string]TriggeredScripts)
 	}
 	config.TriggeredScripts[path] = TriggeredScripts{
-		Path:        path,
-		FuncName:    cmd,
-		TriggerType: triggerType,
+		Path:         path,
+		FuncName:     cmd,
+		TriggerTypes: triggerType,
 	}
 }
 

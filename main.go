@@ -483,7 +483,7 @@ func runCommand(
 		appConfig.deleteLstate(args[1])
 	case "remind":
 		if len(args) < 2 { //nolint: mnd,gomnd
-			client.Cmd.Reply(event, errNotEnoughArgs.Error())
+			client.Cmd.Message(event.Source.Name, errNotEnoughArgs.Error())
 
 			break
 		}
@@ -491,14 +491,15 @@ func runCommand(
 		seconds, err := strconv.Atoi(args[1])
 		if err != nil {
 			client.Cmd.Reply(event, errNotEnoughArgs.Error())
+			client.Cmd.Message(event.Source.Name, errNotEnoughArgs.Error())
 
 			break
 		}
 
-		client.Cmd.Reply(event, "Ok, I'll remind you in "+args[1]+" seconds.")
+		client.Cmd.Message(event.Source.Name, "Ok, I'll remind you in "+args[1]+" seconds.")
 		time.Sleep(time.Duration(seconds) * time.Second)
 
-		client.Cmd.ReplyTo(event, " Ping!")
+		client.Cmd.Message(event.Source.Name, "Ping!")
 	case "forget":
 		client.Cmd.Reply(event, "I no longer even know whether you're supposed to wear or drink a camel.'")
 	case "whois":
@@ -1380,6 +1381,8 @@ func runIRC(appConfig TomlConfig) {
 
 	go LoadAllPlugins(&appConfig, irc)
 
+	go LoadAllEventPlugins(&appConfig, irc)
+
 	if appConfig.DatabaseAddress != "" {
 		context, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
 		defer cancel()
@@ -1474,6 +1477,7 @@ func main() {
 	signal.Notify(quitChannel, syscall.SIGINT, syscall.SIGTERM)
 
 	configPath := flag.String("config", "./config.toml", "path to the config file")
+	prof := flag.Bool("prof", false, "enable prof server")
 
 	flag.Parse()
 
@@ -1503,10 +1507,12 @@ func main() {
 		go runIRC(v)
 	}
 
-	go func() {
-		err := http.ListenAndServe(":6060", nil)
-		log.Println(err)
-	}()
+	if *prof {
+		go func() {
+			err := http.ListenAndServe(":6060", nil)
+			log.Println(err)
+		}()
+	}
 
 	<-quitChannel
 }
