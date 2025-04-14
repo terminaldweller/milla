@@ -53,7 +53,6 @@ func DoGeminiRequest(
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
 	defer cancel()
 
-	// clientGemini, err := genai.NewClient(ctx, option.WithHTTPClient(httpProxyClient))
 	clientGemini, err := genai.NewClient(ctx, &genai.ClientConfig{
 		APIKey:     appConfig.Apikey,
 		HTTPClient: httpProxyClient,
@@ -62,49 +61,48 @@ func DoGeminiRequest(
 		return "", fmt.Errorf("Could not create a genai client.", err)
 	}
 
-	*geminiMemory = append(*geminiMemory, genai.NewContentFromText(systemPrompt, "model"))
 	*geminiMemory = append(*geminiMemory, genai.NewContentFromText(prompt, "user"))
 
-	result, err := clientGemini.Models.GenerateContent(ctx, appConfig.Model, *geminiMemory, nil)
+	temperature := float32(appConfig.Temperature)
+	topk := float32(appConfig.TopK)
+
+	result, err := clientGemini.Models.GenerateContent(ctx, appConfig.Model, *geminiMemory, &genai.GenerateContentConfig{
+		Temperature:       &temperature,
+		SystemInstruction: genai.NewContentFromText(systemPrompt, "system"),
+		TopK:              &topk,
+		TopP:              &appConfig.TopP,
+		// SafetySettings: []*genai.SafetySetting{
+		// 	{
+		// 		Category:  genai.HarmCategoryDangerousContent,
+		// 		Threshold: genai.HarmBlockThresholdBlockNone,
+		// 	},
+		// 	{
+		// 		Category:  genai.HarmCategoryHarassment,
+		// 		Threshold: genai.HarmBlockThresholdBlockNone,
+		// 	},
+		// 	{
+		// 		Category:  genai.HarmCategoryHateSpeech,
+		// 		Threshold: genai.HarmBlockThresholdBlockNone,
+		// 	},
+		// 	{
+		// 		Category:  genai.HarmCategorySexuallyExplicit,
+		// 		Threshold: genai.HarmBlockThresholdBlockNone,
+		// 	},
+		// 	{
+		// 		Category:  genai.HarmCategoryCivicIntegrity,
+		// 		Threshold: genai.HarmBlockThresholdBlockNone,
+		// 	},
+		// 	{
+		// 		Category:  genai.HarmCategoryUnspecified,
+		// 		Threshold: genai.HarmBlockThresholdBlockNone,
+		// 	},
+		// },
+	})
 	if err != nil {
 		return "", fmt.Errorf("Gemini: Could not generate content", err)
 	}
 
-	// model := clientGemini.GenerativeModel(appConfig.Model)
-	// model.SetTemperature(float32(appConfig.Temperature))
-	// model.SetTopK(appConfig.TopK)
-	// model.SetTopP(appConfig.TopP)
-	// model.SystemInstruction = genai.Text(systemPrompt)
-	// model.SafetySettings = []*genai.SafetySetting{
-	// 	{
-	// 		Category:  genai.HarmCategoryDangerousContent,
-	// 		Threshold: genai.HarmBlockThresholdOff,
-	// 	},
-	// 	{
-	// 		Category:  genai.HarmCategoryHarassment,
-	// 		Threshold: genai.HarmBlockThresholdOff,
-	// 	},
-	// 	{
-	// 		Category:  genai.HarmCategoryHateSpeech,
-	// 		Threshold: genai.HarmBlockThresholdOff,
-	// 	},
-	// 	{
-	// 		Category:  genai.HarmCategorySexuallyExplicit,
-	// 		Threshold: genai.HarmBlockThresholdOff,
-	// 	},
-	// }
-
-	// cs := model.StartChat()
-
-	// cs.History = *geminiMemory
-
-	// resp, err := cs.SendMessage(ctx, genai.Text(prompt))
-	// if err != nil {
-	// 	return "", fmt.Errorf("Gemini: Could not send message", err)
-	// }
-
 	return result.Text(), nil
-	// return returnGeminiResponse(resp), nil
 }
 
 func GeminiRequestProcessor(
