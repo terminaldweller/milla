@@ -11,7 +11,6 @@ import (
 
 	"github.com/ailncode/gluaxmlpath"
 	"github.com/cjoudrey/gluahttp"
-	"github.com/google/generative-ai-go/genai"
 	"github.com/jackc/pgx/v5"
 	"github.com/kohkimakimoto/gluayaml"
 	gopherjson "github.com/layeh/gopher-json"
@@ -20,6 +19,7 @@ import (
 	"github.com/yuin/gluare"
 	lua "github.com/yuin/gopher-lua"
 	"gitlab.com/megalithic-llc/gluasocket"
+	"google.golang.org/genai"
 )
 
 func registerStructAsLuaMetaTable[T any](

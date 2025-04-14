@@ -11,11 +11,8 @@ import (
 	"time"
 
 	"github.com/alecthomas/chroma/v2/quick"
-	"github.com/google/generative-ai-go/genai"
-
-	// "cloud.google.com/go/vertexai/genai"
 	"github.com/lrstanley/girc"
-	"google.golang.org/api/option"
+	"google.golang.org/genai"
 )
 
 func (t *ProxyRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -56,50 +53,58 @@ func DoGeminiRequest(
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(appConfig.RequestTimeout)*time.Second)
 	defer cancel()
 
-	clientGemini, err := genai.NewClient(ctx, option.WithHTTPClient(httpProxyClient))
+	// clientGemini, err := genai.NewClient(ctx, option.WithHTTPClient(httpProxyClient))
+	clientGemini, err := genai.NewClient(ctx, &genai.ClientConfig{
+		APIKey:     appConfig.Apikey,
+		HTTPClient: httpProxyClient,
+	})
 	if err != nil {
 		return "", fmt.Errorf("Could not create a genai client.", err)
 	}
-	defer clientGemini.Close()
 
-	model := clientGemini.GenerativeModel(appConfig.Model)
-	model.SetTemperature(float32(appConfig.Temperature))
-	model.SetTopK(appConfig.TopK)
-	model.SetTopP(appConfig.TopP)
-	model.SystemInstruction = &genai.Content{
-		Parts: []genai.Part{
-			genai.Text(systemPrompt),
-		},
-	}
-	model.SafetySettings = []*genai.SafetySetting{
-		{
-			Category:  genai.HarmCategoryDangerousContent,
-			Threshold: genai.HarmBlockNone,
-		},
-		{
-			Category:  genai.HarmCategoryHarassment,
-			Threshold: genai.HarmBlockNone,
-		},
-		{
-			Category:  genai.HarmCategoryHateSpeech,
-			Threshold: genai.HarmBlockNone,
-		},
-		{
-			Category:  genai.HarmCategorySexuallyExplicit,
-			Threshold: genai.HarmBlockNone,
-		},
-	}
+	*geminiMemory = append(*geminiMemory, genai.NewContentFromText(systemPrompt, "model"))
+	*geminiMemory = append(*geminiMemory, genai.NewContentFromText(prompt, "user"))
 
-	cs := model.StartChat()
-
-	cs.History = *geminiMemory
-
-	resp, err := cs.SendMessage(ctx, genai.Text(prompt))
+	result, err := clientGemini.Models.GenerateContent(ctx, appConfig.Model, *geminiMemory, nil)
 	if err != nil {
-		return "", fmt.Errorf("Gemini: Could not send message", err)
+		return "", fmt.Errorf("Gemini: Could not generate content", err)
 	}
 
-	return returnGeminiResponse(resp), nil
+	// model := clientGemini.GenerativeModel(appConfig.Model)
+	// model.SetTemperature(float32(appConfig.Temperature))
+	// model.SetTopK(appConfig.TopK)
+	// model.SetTopP(appConfig.TopP)
+	// model.SystemInstruction = genai.Text(systemPrompt)
+	// model.SafetySettings = []*genai.SafetySetting{
+	// 	{
+	// 		Category:  genai.HarmCategoryDangerousContent,
+	// 		Threshold: genai.HarmBlockThresholdOff,
+	// 	},
+	// 	{
+	// 		Category:  genai.HarmCategoryHarassment,
+	// 		Threshold: genai.HarmBlockThresholdOff,
+	// 	},
+	// 	{
+	// 		Category:  genai.HarmCategoryHateSpeech,
+	// 		Threshold: genai.HarmBlockThresholdOff,
+	// 	},
+	// 	{
+	// 		Category:  genai.HarmCategorySexuallyExplicit,
+	// 		Threshold: genai.HarmBlockThresholdOff,
+	// 	},
+	// }
+
+	// cs := model.StartChat()
+
+	// cs.History = *geminiMemory
+
+	// resp, err := cs.SendMessage(ctx, genai.Text(prompt))
+	// if err != nil {
+	// 	return "", fmt.Errorf("Gemini: Could not send message", err)
+	// }
+
+	return result.Text(), nil
+	// return returnGeminiResponse(resp), nil
 }
 
 func GeminiRequestProcessor(
@@ -122,28 +127,12 @@ func GeminiRequestProcessor(
 		*geminiMemory = []*genai.Content{}
 
 		for _, context := range appConfig.Context {
-			*geminiMemory = append(*geminiMemory, &genai.Content{
-				Parts: []genai.Part{
-					genai.Text(context),
-				},
-				Role: "model",
-			})
+			*geminiMemory = append(*geminiMemory, genai.NewContentFromText(context, "model"))
 		}
 	}
 
-	*geminiMemory = append(*geminiMemory, &genai.Content{
-		Parts: []genai.Part{
-			genai.Text(prompt),
-		},
-		Role: "user",
-	})
-
-	*geminiMemory = append(*geminiMemory, &genai.Content{
-		Parts: []genai.Part{
-			genai.Text(geminiResponse),
-		},
-		Role: "model",
-	})
+	*geminiMemory = append(*geminiMemory, genai.NewContentFromText(prompt, "user"))
+	*geminiMemory = append(*geminiMemory, genai.NewContentFromText(geminiResponse, "model"))
 
 	var writer bytes.Buffer
 

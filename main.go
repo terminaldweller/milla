@@ -26,12 +26,12 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/cenkalti/backoff/v5"
-	"github.com/google/generative-ai-go/genai"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lrstanley/girc"
 	openai "github.com/sashabaranov/go-openai"
 	"golang.org/x/net/proxy"
+	"google.golang.org/genai"
 )
 
 var (
@@ -261,21 +261,11 @@ func handleCustomCommand(
 		var geminiMemory []*genai.Content
 
 		for _, log := range logs {
-			geminiMemory = append(geminiMemory, &genai.Content{
-				Parts: []genai.Part{
-					genai.Text(log.Log),
-				},
-				Role: "user",
-			})
+			geminiMemory = append(geminiMemory, genai.NewContentFromText(log.Log, "user"))
 		}
 
 		for _, customContext := range customCommand.Context {
-			geminiMemory = append(geminiMemory, &genai.Content{
-				Parts: []genai.Part{
-					genai.Text(customContext),
-				},
-				Role: "model",
-			})
+			geminiMemory = append(geminiMemory, genai.NewContentFromText(customContext, "model"))
 		}
 
 		result := GeminiRequestProcessor(appConfig, client, event, &geminiMemory, customCommand.Prompt, customCommand.SystemPrompt)
@@ -820,12 +810,7 @@ func runIRC(appConfig TomlConfig) {
 		OllamaHandler(irc, &appConfig, &OllamaMemory)
 	case "gemini":
 		for _, context := range appConfig.Context {
-			GeminiMemory = append(GeminiMemory, &genai.Content{
-				Parts: []genai.Part{
-					genai.Text(context),
-				},
-				Role: "model",
-			})
+			GeminiMemory = append(GeminiMemory, genai.NewContentFromText(context, "model"))
 		}
 
 		GeminiHandler(irc, &appConfig, &GeminiMemory)
