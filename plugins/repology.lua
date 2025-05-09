@@ -5,7 +5,7 @@ local json = require("json")
 -- https://repology.org/api
 -- /repology void_x86_64
 function repology(arg)
-    os.setenv("http_proxy", "http://172.17.0.1:8120")
+    -- os.setenv("http_proxy", "http://172.17.0.1:8120")
 
     local http = require("http")
 

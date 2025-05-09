@@ -1,0 +1,16 @@
+services:
+  useragents:
+    image: useragents
+    build:
+      context: .
+    ports:
+      - 127.0.0.1:9910:443/tcp
+    networks:
+      - uanet
+    environment:
+      - OPENAI_API_KEY=
+    cap_drop:
+      - ALL
+    entrypoint: ["/docker-entrypoint.sh"]
+networks:
+  uanet:

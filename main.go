@@ -538,22 +538,55 @@ func runCommand(
 		randomNumber := lowerLimit + rand.Intn(upperLimit-lowerLimit+1)
 
 		client.Cmd.ReplyTo(event, fmt.Sprint(randomNumber))
-	default:
-		_, ok := appConfig.LuaCommands[args[0]]
-		if !ok {
-			client.Cmd.Reply(event, errUnknCmd.Error())
+	case "ua":
+		if !isFromAdmin(appConfig.Admins, event) {
+			break
+		}
+
+		if len(args) < 2 { //nolint: mnd,gomnd
+			client.Cmd.Reply(event, errNotEnoughArgs.Error())
 
 			break
 		}
 
-		luaArgs := strings.TrimPrefix(event.Last(), appConfig.IrcNick+": ")
-		luaArgs = strings.TrimSpace(luaArgs)
-		luaArgs = strings.TrimPrefix(luaArgs, "/")
-		luaArgs = strings.TrimPrefix(luaArgs, args[0])
-		luaArgs = strings.TrimSpace(luaArgs)
+		var query string
 
-		result := RunLuaFunc(args[0], luaArgs, client, appConfig)
-		client.Cmd.Reply(event, result)
+		if len(args) >= 3 {
+			query = strings.TrimPrefix(cmd, args[0])
+		}
+
+		log.Println(args[1], query)
+		response := UserAgentsGet(args[1], query, appConfig)
+
+		// client.Cmd.Reply(event, response)
+		SendToIRC(client, event, response, appConfig.ChromaFormatter)
+
+	default:
+		_, ok := appConfig.LuaCommands[args[0]]
+		if ok {
+			luaArgs := strings.TrimPrefix(event.Last(), appConfig.IrcNick+": ")
+			luaArgs = strings.TrimSpace(luaArgs)
+			luaArgs = strings.TrimPrefix(luaArgs, "/")
+			luaArgs = strings.TrimPrefix(luaArgs, args[0])
+			luaArgs = strings.TrimSpace(luaArgs)
+
+			result := RunLuaFunc(args[0], luaArgs, client, appConfig)
+			client.Cmd.Reply(event, result)
+
+			break
+		}
+
+		_, ok = appConfig.Aliases[args[0]]
+		if ok {
+			dummyEvent := event
+			dummyEvent.Params[len(dummyEvent.Params)-1] = appConfig.Aliases[args[0]].Alias
+
+			runCommand(client, dummyEvent, appConfig)
+
+			break
+		}
+
+		client.Cmd.Reply(event, errUnknCmd.Error())
 	}
 }
 
@@ -914,6 +947,7 @@ func runIRC(appConfig TomlConfig) {
 
 		_, err := backoff.Retry(ctx, connectToIRC, expBackoff)
 		if err != nil {
+			log.Println(appConfig.Name)
 			LogError(err)
 		} else {
 			return
@@ -959,7 +993,11 @@ func main() {
 	}
 
 	for _, v := range config.Ircd {
-		go runIRC(v)
+		if v.IrcServer != "" {
+			go runIRC(v)
+		} else {
+			log.Println("Could not find server for irc connection in the config file. skipping. check your config for spelling errors maybe.")
+		}
 	}
 
 	if *prof {

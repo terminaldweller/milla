@@ -43,6 +43,17 @@ channel = ["#manga"]
 [ircd.devinet.rss.anime]
 rssFile = "/rssfeeds/anime.json"
 channel = ["#anime"]
+[ircd.devinet.triggeredScripts.hello]
+path = "/plugins/hello.lua"
+funcName = "hello"
+triggerTypes = ["PRIVMSG"]
+[ircd.devinet.userAgentActions.cryptoDailyDigest]
+agent_name = "crypto_daily_digest"
+instructions = "you are a news digest bot"
+query = "give me a news digest of the news related to to cryptocurrencries for today. please do mention your sources for each one."
+tools = ["WebSearchTool"]
+[ircd.devinet.aliases.cryptoDailyDigest]
+alias = "/ua cryptoDailyDigest"
 
 [ircd.liberanet]
 ircServer = "irc.libera.chat"

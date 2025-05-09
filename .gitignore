@@ -21,3 +21,13 @@
 go.work
 
 ,*
+
+manga.json
+ipo.json
+anime.json
+crypto.json
+youtube.json
+security.json
+term_com_certs.json
+Session.vim
+dive.log

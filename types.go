@@ -102,42 +102,44 @@ type TomlConfig struct {
 	LuaStates                     map[string]LuaLstates
 	LuaCommands                   map[string]LuaCommand
 	TriggeredScripts              map[string]TriggeredScripts
-	Rss                           map[string]RssFile `toml:"rss"`
-	RequestTimeout                int                `toml:"requestTimeout"`
-	MillaReconnectDelay           int                `toml:"millaReconnectDelay"`
-	IrcPort                       int                `toml:"ircPort"`
-	KeepAlive                     int                `toml:"keepAlive"`
-	MemoryLimit                   int                `toml:"memoryLimit"`
-	PingDelay                     int                `toml:"pingDelay"`
-	PingTimeout                   int                `toml:"pingTimeout"`
-	OllamaMirostat                int                `json:"ollamaMirostat"`
-	OllamaMirostatEta             float64            `json:"ollamaMirostatEta"`
-	OllamaMirostatTau             float64            `json:"ollamaMirostatTau"`
-	OllamaNumCtx                  int                `json:"ollamaNumCtx"`
-	OllamaRepeatLastN             int                `json:"ollamaRepeatLastN"`
-	OllamaRepeatPenalty           float64            `json:"ollamaRepeatPenalty"`
-	Temperature                   float64            `json:"temperature"`
-	OllamaSeed                    int                `json:"ollamaSeed"`
-	OllamaNumPredict              int                `json:"ollamaNumPredict"`
-	OllamaMinP                    float64            `json:"ollamaMinP"`
-	TopP                          float32            `toml:"topP"`
-	TopK                          int32              `toml:"topK"`
-	IrcBackOffInitialInterval     int                `toml:"ircBackOffInitialInterval"`
-	IrcBackOffRandomizationFactor float64            `toml:"ircbackOffRandomizationFactor"`
-	IrcBackOffMultiplier          float64            `toml:"ircBackOffMultiplier"`
-	IrcBackOffMaxInterval         int                `toml:"ircBackOffMaxInterval"`
-	DbBackOffInitialInterval      int                `toml:"dbBackOffInitialInterval"`
-	DbBackOffRandomizationFactor  float64            `toml:"dbBackOffRandomizationFactor"`
-	DbBackOffMultiplier           float64            `toml:"dbBackOffMultiplier"`
-	DbBackOffMaxInterval          int                `toml:"dbBackOffMaxInterval"`
-	EnableSasl                    bool               `toml:"enableSasl"`
-	SkipTLSVerify                 bool               `toml:"skipTLSVerify"`
-	UseTLS                        bool               `toml:"useTLS"`
-	DisableSTSFallback            bool               `toml:"disableSTSFallback"`
-	AllowFlood                    bool               `toml:"allowFlood"`
-	Debug                         bool               `toml:"debug"`
-	Out                           bool               `toml:"out"`
-	AdminOnly                     bool               `toml:"adminOnly"`
+	Rss                           map[string]RssFile          `toml:"rss"`
+	UserAgentActions              map[string]UserAgentRequest `toml:"userAgentActions"`
+	Aliases                       map[string]Alias            `toml:"aliases"`
+	RequestTimeout                int                         `toml:"requestTimeout"`
+	MillaReconnectDelay           int                         `toml:"millaReconnectDelay"`
+	IrcPort                       int                         `toml:"ircPort"`
+	KeepAlive                     int                         `toml:"keepAlive"`
+	MemoryLimit                   int                         `toml:"memoryLimit"`
+	PingDelay                     int                         `toml:"pingDelay"`
+	PingTimeout                   int                         `toml:"pingTimeout"`
+	OllamaMirostat                int                         `json:"ollamaMirostat"`
+	OllamaMirostatEta             float64                     `json:"ollamaMirostatEta"`
+	OllamaMirostatTau             float64                     `json:"ollamaMirostatTau"`
+	OllamaNumCtx                  int                         `json:"ollamaNumCtx"`
+	OllamaRepeatLastN             int                         `json:"ollamaRepeatLastN"`
+	OllamaRepeatPenalty           float64                     `json:"ollamaRepeatPenalty"`
+	Temperature                   float64                     `json:"temperature"`
+	OllamaSeed                    int                         `json:"ollamaSeed"`
+	OllamaNumPredict              int                         `json:"ollamaNumPredict"`
+	OllamaMinP                    float64                     `json:"ollamaMinP"`
+	TopP                          float32                     `toml:"topP"`
+	TopK                          int32                       `toml:"topK"`
+	IrcBackOffInitialInterval     int                         `toml:"ircBackOffInitialInterval"`
+	IrcBackOffRandomizationFactor float64                     `toml:"ircbackOffRandomizationFactor"`
+	IrcBackOffMultiplier          float64                     `toml:"ircBackOffMultiplier"`
+	IrcBackOffMaxInterval         int                         `toml:"ircBackOffMaxInterval"`
+	DbBackOffInitialInterval      int                         `toml:"dbBackOffInitialInterval"`
+	DbBackOffRandomizationFactor  float64                     `toml:"dbBackOffRandomizationFactor"`
+	DbBackOffMultiplier           float64                     `toml:"dbBackOffMultiplier"`
+	DbBackOffMaxInterval          int                         `toml:"dbBackOffMaxInterval"`
+	EnableSasl                    bool                        `toml:"enableSasl"`
+	SkipTLSVerify                 bool                        `toml:"skipTLSVerify"`
+	UseTLS                        bool                        `toml:"useTLS"`
+	DisableSTSFallback            bool                        `toml:"disableSTSFallback"`
+	AllowFlood                    bool                        `toml:"allowFlood"`
+	Debug                         bool                        `toml:"debug"`
+	Out                           bool                        `toml:"out"`
+	AdminOnly                     bool                        `toml:"adminOnly"`
 	pool                          *pgxpool.Pool
 	Admins                        []string   `toml:"admins"`
 	IrcChannels                   [][]string `toml:"ircChannels"`
@@ -310,4 +312,19 @@ type ProxyRoundTripper struct {
 	APIKey string
 
 	ProxyURL string
+}
+
+type UserAgentRequest struct {
+	Agent_Name   string `json:"agent_name" toml:"agent_name"`
+	Instructions string `json:"instructions" toml:"instructions"`
+	Query        string `json:"query" toml:"query"`
+}
+
+type UserAgentResponse struct {
+	Agent_Name string `json:"agent_name"`
+	Response   string `json:"response"`
+}
+
+type Alias struct {
+	Alias string `toml:"alias"`
 }

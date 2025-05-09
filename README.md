@@ -12,10 +12,13 @@ Milla is an IRC bot that:
 
 milla accepts one cli arg which tells it where to look for the config file:<br/>
 
-```$ milla -help
-Usage of ./milla:
+```txt
+$ milla -help
+Usage of milla:
   -config string
           path to the config file (default "./config.toml")
+  -prof
+          enable prof server
 ```
 
 The bot will respond to chat prompts if they begin with `botnick:`.<br/>
@@ -274,6 +277,70 @@ prompt= "i have provided to you news headlines in the form of previous conversat
 | remind   | Pings the user after the given amount in seconds: `/remind 1200`                                                                                                                                                |
 | roll     | Rolls a number between 1 and 6 if no arguments are given. With one argument it rolls a number between 1 and the given number. With two arguments it rolls a number between the two numbers: `/roll 10000 66666` |
 | whois    | IANA whois endpoint query: `milla: /whois xyz`. This command uses the `generalProxy` option.                                                                                                                    |
+| ua       | runs a user agent: `milla: /ua web_search_tool`                                                                                                                                                                 |
+
+## UserAgents
+
+For user agents, we are using the [OpenAI agents SDK](https://github.com/openai/openai-agents-python) for user agents.<br/>
+
+You can add your custom agents under `./useragents/src/custom_agents`. Use the `agentRegistry` decorator to register your Agent. The decorated function is expected to return an `Agent`. The name of the function is the `agent_name` you have configured in `config.toml`. You can pass the `query` parameter when asking milla to run the command in which case it will override the default query parameter provided in `config.toml`.
+For imports, make sure not to use relative imports, i.e. `from ..current_time import fetch_date` and use absolute imports `from src.current_time import fetch_date`.<br/>
+
+```python
+from agents import Agent, WebSearchTool
+from src.current_time import fetch_date
+from src.models import AgentRequest
+from src.registry import agentRegistry
+
+
+@agentRegistry
+def web_search_tool(agent_request: AgentRequest) -> Agent:
+    tools = [WebSearchTool(), fetch_date]
+
+    agent = Agent(
+        name=agent_request.agent_name,
+        instructions=agent_request.instructions,
+        tools=tools,
+    )
+
+    return agent
+```
+
+And then you can use the agent like this:
+
+```text
+milla: /ua web_search_tool
+```
+
+or:
+
+```text
+milla: /ua web_search_tool do something else
+```
+
+Below is an example on how to configure a user agent:
+
+```toml
+[ircd.myircnet.userAgentActions.cyberSecurityDigest]
+agent_name = "web_search_tool"
+instructions = "you are a cybersecurity news digest bot"
+query = "give me a news digest of the news related to to cybersecurity for today. mention your sources for each one."
+```
+
+## Alias
+
+Aliases are a simple string swap for commands(this includes all the commands):
+
+```toml
+[ircd.myircnet.aliases.cyberSecurityDigest]
+alias = "/ua web_search_tool"
+```
+
+and then you can use it like so:
+
+```txt
+milla: /cyberSecurityDigest
+```
 
 ## Deploy
 
@@ -300,6 +367,7 @@ services:
         max-size: "100m"
     networks:
       - terranet
+      - dbnet
     user: 1000:1000
     restart: unless-stopped
     entrypoint: ["/usr/bin/milla"]
@@ -331,7 +399,6 @@ services:
       - POSTGRES_INITDB_ARGS_FILE=/run/secrets/pg_initdb_args_secret
       - POSTGRES_DB_FILE=/run/secrets/pg_db_secret
     networks:
-      - terranet
       - dbnet
     secrets:
       - pg_pass_secret
@@ -339,37 +406,32 @@ services:
       - pg_initdb_args_secret
       - pg_db_secret
     runtime: runsc
-  pgadmin:
-    image: dpage/pgadmin4:8.6
+  useragents:
+    image: useragents
     deploy:
       resources:
         limits:
-          memory: 1024M
+          memory: 512M
     logging:
       driver: "json-file"
       options:
-        max-size: "100m"
-    environment:
-      - PGADMIN_LISTEN_PORT=${PGADMIN_LISTEN_PORT:-5050}
-      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL:
-      - PGADMIN_DEFAULT_PASSWORD_FILE=/run/secrets/pgadmin_pass
-      - PGADMIN_DISABLE_POSTFIX=${PGADMIN_DISABLE_POSTFIX:-YES}
+        max-size: "200m"
+    build:
+      context: ./useragents/
     ports:
-      - "127.0.0.1:5050:5050/tcp"
-    restart: unless-stopped
-    volumes:
-      - terra_pgadmin_vault:/var/lib/pgadmin
+      - 127.0.0.1:9909:443/tcp
     networks:
-      - dbnet
-    secrets:
-      - pgadmin_pass
+      - terranet
+    environment:
+      - OPENAI_API_KEY=XXXXX
+    cap_drop:
+      - ALL
+    entrypoint: ["/useragent/main.py"]
 networks:
   terranet:
-    driver: bridge
   dbnet:
 volumes:
   terra_postgres_vault:
-  terra_pgadmin_vault:
 secrets:
   pg_pass_secret:
     file: ./pg/pg_pass_secret
@@ -379,8 +441,6 @@ secrets:
     file: ./pg/pg_initdb_args_secret
   pg_db_secret:
     file: ./pg/pg_db_secret
-  pgadmin_pass:
-    file: ./pgadmin/pgadmin_pass
 ```
 
 The env vars `UID` and `GID` need to be defined or they can replaces by your host user's uid and gid.<br/>
@@ -524,10 +584,12 @@ Also please note that this is just an example script. If you want milla to handl
 
 ### Plugins
 
-| Name      | Explanation                                                                                                                                                               |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ip.lua    | A geo-ip lookup for both ipv4 and ipv6. The API request is sent to http://ip-api.com. You can set the `http_proxy` env var for this script.                               |
-| urban.lua | Asks urban dictionary for the meaning. it only has one switch, `-n`, e.g. `-n 3` which will give you 3 definitions instead of the default 1 answer that will be returned. |
+| Name         | Explanation                                                                                                                                                               |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ip.lua       | A geo-ip lookup for both ipv4 and ipv6. The API request is sent to http://ip-api.com. You can set the `http_proxy` env var for this script.                               |
+| urban.lua    | Asks urban dictionary for the meaning. it only has one switch, `-n`, e.g. `-n 3` which will give you 3 definitions instead of the default 1 answer that will be returned. |
+| repology.lua | Lists the problems for a distro using the [repology api](https://repology.org/api).                                                                                       |
+| robtex.lua   | `ipquery`,`asquery`,`pdns`,`pdns_reverse`                                                                                                                                 |
 
 ### Milla's Lua Module
 
@@ -573,6 +635,16 @@ milla.register_cmd(script_path, cmd_name, function_name)
 
 ```lua
 milla.url_encode(str)
+```
+
+```lua
+milla.reply_to(reply)
+```
+
+Since commands are messages sent to a bot, you can use the provided functions to run any milla commands, including user agents. Note that the said command will come from the milla instance that runs the lua script so make sure your `adminOnly` and `admins` options allow for that.<br/>
+
+```lua
+milla.send_message("terra2: /ua web_search_tool", "terra2")
 ```
 
 Using `register_cmd` we can register a command that will be available to run like the built-in and customs commands.<br/>

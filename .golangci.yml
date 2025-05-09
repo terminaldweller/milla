@@ -29,3 +29,6 @@ linters-settings:
         - github.com/layeh/gopher-json
         - github.com/mmcdole/gofeed
         - github.com/cenkalti/backoff/v5
+        - golang.org/x/net/proxy
+        - google.golang.org/genai
+        - golang.org/x/net/html
