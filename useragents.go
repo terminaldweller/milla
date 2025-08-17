@@ -29,10 +29,11 @@ func UserAgentsGet(uaActionName, query string, appConfig *TomlConfig) string {
 
 	userAgentRequest.Agent_Name = appConfig.UserAgentActions[uaActionName].Agent_Name
 	userAgentRequest.Instructions = appConfig.UserAgentActions[uaActionName].Instructions
-	userAgentRequest.Query = appConfig.UserAgentActions[uaActionName].Query
 
 	if query != "" {
 		userAgentRequest.Query = query
+	} else {
+		userAgentRequest.Query = appConfig.UserAgentActions[uaActionName].Query
 	}
 
 	log.Println("UserAgentRequest:", appConfig.UserAgentActions[uaActionName])

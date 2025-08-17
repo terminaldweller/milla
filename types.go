@@ -207,7 +207,8 @@ func (config *TomlConfig) deleteTriggeredScript(name string) {
 }
 
 type AppConfig struct {
-	Ircd map[string]TomlConfig `toml:"ircd"`
+	Ircd  map[string]TomlConfig   `toml:"ircd"`
+	Ghost map[string]GhostNetwork `toml:"ghost"`
 }
 
 type OllamaRequestOptions struct {
@@ -327,4 +328,29 @@ type UserAgentResponse struct {
 
 type Alias struct {
 	Alias string `toml:"alias"`
+}
+
+type GhostRuleSet struct {
+	DisableAll bool     `toml:"disableAll"`
+	WhiteList  []string `toml:"whiteList"`
+	EnableAll  bool     `toml:"enableAll"`
+	BlackList  []string `toml:"blackList"`
+	Outward    bool     `toml:"outward"`
+}
+
+type GhostNetwork struct {
+	ServerAddress  string         `toml:"serverAddress"`
+	UseTLS         bool           `toml:"useTLS"`
+	SkipTLSVerify  bool           `toml:"skipTLSVerify"`
+	Nick           string         `toml:"nick"`
+	SaslUser       string         `toml:"saslUser"`
+	SaslPass       string         `toml:"saslPass"`
+	CertPath       string         `toml:"certPath"`
+	KeyPath        string         `toml:"keyPath"`
+	ListenAddress  string         `toml:"listenAddress"`
+	Rephrase       bool           `toml:"rephrase"`
+	OllamaEndpoint string         `toml:"ollamaEndpoint"`
+	Instructions   []string       `toml:"instructions"`
+	Prompt         string         `toml:"prompt"`
+	GhostRuleSets  []GhostRuleSet `toml:"ghostRuleSets"`
 }

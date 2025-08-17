@@ -467,6 +467,14 @@ func runCommand(
 		}
 
 		appConfig.deleteLstate(args[1])
+	case "list":
+		if !isFromAdmin(appConfig.Admins, event) {
+			break
+		}
+
+		for key, value := range appConfig.LuaCommands {
+			client.Cmd.Reply(event, fmt.Sprintf("%s: %s", key, value.Path))
+		}
 	case "remind":
 		if len(args) < 2 { //nolint: mnd,gomnd
 			client.Cmd.Message(event.Source.Name, errNotEnoughArgs.Error())
@@ -555,7 +563,7 @@ func runCommand(
 			query = strings.TrimPrefix(cmd, args[0])
 		}
 
-		log.Println(args[1], query)
+		log.Println("query:", query)
 		response := UserAgentsGet(args[1], query, appConfig)
 
 		// client.Cmd.Reply(event, response)

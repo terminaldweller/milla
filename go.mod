@@ -10,6 +10,8 @@ require (
 	github.com/alecthomas/chroma/v2 v2.16.0
 	github.com/cenkalti/backoff/v5 v5.0.2
 	github.com/cjoudrey/gluahttp v0.0.0-20201111170219-25003d9adfa9
+	github.com/coyim/otr3 v0.0.0-20230314203300-86897a28af47
+	github.com/ergochat/irc-go v0.4.0
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/kohkimakimoto/gluayaml v0.0.0-20160815032708-6fe413d49d73
 	github.com/layeh/gopher-json v0.0.0-20201124131017-552bb3c4c3bf
@@ -29,6 +31,8 @@ require (
 	cloud.google.com/go/compute/metadata v0.6.0 // indirect
 	github.com/PuerkitoBio/goquery v1.10.3 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
+	github.com/awnumar/memcall v0.1.2 // indirect
+	github.com/coyim/constbn v0.0.0-20230207191538-27f0129d98cd // indirect
 	github.com/dlclark/regexp2 v1.11.5 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
