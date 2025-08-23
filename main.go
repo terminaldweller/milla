@@ -1008,6 +1008,10 @@ func main() {
 		}
 	}
 
+	for k, v := range config.Ghost {
+		go RunGhost(v, k)
+	}
+
 	if *prof {
 		go func() {
 			err := http.ListenAndServe(":6060", nil)

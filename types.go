@@ -339,7 +339,11 @@ type GhostRuleSet struct {
 }
 
 type GhostNetwork struct {
-	ServerAddress  string         `toml:"serverAddress"`
+	ServerCert     string         `toml:"serverCert"`
+	ServerKey      string         `toml:"serverKey"`
+	ServerAddress  string         `toml:"ServerAddress"`
+	ServerName     string         `toml:"serverName"`
+	UpstreamProxy  string         `toml:"upstreamProxy"`
 	UseTLS         bool           `toml:"useTLS"`
 	SkipTLSVerify  bool           `toml:"skipTLSVerify"`
 	Nick           string         `toml:"nick"`
@@ -353,4 +357,5 @@ type GhostNetwork struct {
 	Instructions   []string       `toml:"instructions"`
 	Prompt         string         `toml:"prompt"`
 	GhostRuleSets  []GhostRuleSet `toml:"ghostRuleSets"`
+	LogRaw         bool           `toml:"logRaw"`
 }

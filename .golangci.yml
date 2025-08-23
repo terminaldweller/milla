@@ -32,3 +32,4 @@ linters-settings:
         - golang.org/x/net/proxy
         - google.golang.org/genai
         - golang.org/x/net/html
+        - github.com/ergochat/irc-go/ircmsg
