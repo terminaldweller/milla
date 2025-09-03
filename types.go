@@ -112,16 +112,17 @@ type TomlConfig struct {
 	MemoryLimit                   int                         `toml:"memoryLimit"`
 	PingDelay                     int                         `toml:"pingDelay"`
 	PingTimeout                   int                         `toml:"pingTimeout"`
-	OllamaMirostat                int                         `json:"ollamaMirostat"`
-	OllamaMirostatEta             float64                     `json:"ollamaMirostatEta"`
-	OllamaMirostatTau             float64                     `json:"ollamaMirostatTau"`
-	OllamaNumCtx                  int                         `json:"ollamaNumCtx"`
-	OllamaRepeatLastN             int                         `json:"ollamaRepeatLastN"`
-	OllamaRepeatPenalty           float64                     `json:"ollamaRepeatPenalty"`
-	Temperature                   float64                     `json:"temperature"`
-	OllamaSeed                    int                         `json:"ollamaSeed"`
-	OllamaNumPredict              int                         `json:"ollamaNumPredict"`
-	OllamaMinP                    float64                     `json:"ollamaMinP"`
+	OllamaMirostat                int                         `toml:"ollamaMirostat"`
+	OllamaMirostatEta             float64                     `toml:"ollamaMirostatEta"`
+	OllamaMirostatTau             float64                     `toml:"ollamaMirostatTau"`
+	OllamaNumCtx                  int                         `toml:"ollamaNumCtx"`
+	OllamaRepeatLastN             int                         `toml:"ollamaRepeatLastN"`
+	OllamaRepeatPenalty           float64                     `toml:"ollamaRepeatPenalty"`
+	Temperature                   float64                     `toml:"temperature"`
+	OllamaSeed                    int                         `toml:"ollamaSeed"`
+	OllamaNumPredict              int                         `toml:"ollamaNumPredict"`
+	OllamaMinP                    float64                     `toml:"ollamaMinP"`
+	OllamaThink                   bool                        `toml:"ollamaThink"`
 	TopP                          float32                     `toml:"topP"`
 	TopK                          int32                       `toml:"topK"`
 	IrcBackOffInitialInterval     int                         `toml:"ircBackOffInitialInterval"`
@@ -238,6 +239,7 @@ type OllamaChatMessagesResponse struct {
 type OllamaChatRequest struct {
 	Model     string               `json:"model"`
 	Stream    bool                 `json:"stream"`
+	Think     bool                 `json:"think"`
 	KeepAlive time.Duration        `json:"keep_alive"`
 	Options   OllamaRequestOptions `json:"options"`
 	System    string               `json:"system"`
@@ -331,31 +333,31 @@ type Alias struct {
 }
 
 type GhostRuleSet struct {
-	DisableAll bool     `toml:"disableAll"`
-	WhiteList  []string `toml:"whiteList"`
-	EnableAll  bool     `toml:"enableAll"`
-	BlackList  []string `toml:"blackList"`
-	Outward    bool     `toml:"outward"`
+	Types          []string `toml:"types"`
+	OllamaEndpoint string   `toml:"ollamaEndpoint"`
+	Instructions   []string `toml:"instructions"`
+	Prompt         string   `toml:"prompt"`
+	DisableAll     bool     `toml:"disableAll"`
+	WhiteList      []string `toml:"whiteList"`
+	EnableAll      bool     `toml:"enableAll"`
+	BlackList      []string `toml:"blackList"`
+	Incoming       bool     `toml:"incoming"`
+	Rephrase       bool     `toml:"rephrase"`
 }
 
 type GhostNetwork struct {
-	ServerCert     string         `toml:"serverCert"`
-	ServerKey      string         `toml:"serverKey"`
-	ServerAddress  string         `toml:"ServerAddress"`
-	ServerName     string         `toml:"serverName"`
-	UpstreamProxy  string         `toml:"upstreamProxy"`
-	UseTLS         bool           `toml:"useTLS"`
-	SkipTLSVerify  bool           `toml:"skipTLSVerify"`
-	Nick           string         `toml:"nick"`
-	SaslUser       string         `toml:"saslUser"`
-	SaslPass       string         `toml:"saslPass"`
-	CertPath       string         `toml:"certPath"`
-	KeyPath        string         `toml:"keyPath"`
-	ListenAddress  string         `toml:"listenAddress"`
-	Rephrase       bool           `toml:"rephrase"`
-	OllamaEndpoint string         `toml:"ollamaEndpoint"`
-	Instructions   []string       `toml:"instructions"`
-	Prompt         string         `toml:"prompt"`
-	GhostRuleSets  []GhostRuleSet `toml:"ghostRuleSets"`
-	LogRaw         bool           `toml:"logRaw"`
+	ServerCert    string                  `toml:"serverCert"`
+	ServerKey     string                  `toml:"serverKey"`
+	ServerAddress string                  `toml:"ServerAddress"`
+	ServerName    string                  `toml:"serverName"`
+	UpstreamProxy string                  `toml:"upstreamProxy"`
+	UseTLS        bool                    `toml:"useTLS"`
+	SkipTLSVerify bool                    `toml:"skipTLSVerify"`
+	SaslUser      string                  `toml:"saslUser"`
+	SaslPass      string                  `toml:"saslPass"`
+	CertPath      string                  `toml:"certPath"`
+	KeyPath       string                  `toml:"keyPath"`
+	ListenAddress string                  `toml:"listenAddress"`
+	LogRaw        bool                    `toml:"logRaw"`
+	GhostRuleSets map[string]GhostRuleSet `toml:"ghostRuleSet"`
 }

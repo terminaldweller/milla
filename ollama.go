@@ -47,6 +47,7 @@ func DoOllamaRequest(
 		Model:     appConfig.Model,
 		KeepAlive: time.Duration(appConfig.KeepAlive),
 		Stream:    false,
+		Think:     appConfig.OllamaThink,
 		Messages:  *ollamaMemory,
 		System:    systemPrompt,
 		Options: OllamaRequestOptions{
