@@ -122,7 +122,7 @@ type TomlConfig struct {
 	OllamaSeed                    int                         `toml:"ollamaSeed"`
 	OllamaNumPredict              int                         `toml:"ollamaNumPredict"`
 	OllamaMinP                    float64                     `toml:"ollamaMinP"`
-	OllamaThink                   bool                        `toml:"ollamaThink"`
+	OllamaThink                   string                      `toml:"ollamaThink"`
 	TopP                          float32                     `toml:"topP"`
 	TopK                          int32                       `toml:"topK"`
 	IrcBackOffInitialInterval     int                         `toml:"ircBackOffInitialInterval"`
@@ -239,7 +239,7 @@ type OllamaChatMessagesResponse struct {
 type OllamaChatRequest struct {
 	Model     string               `json:"model"`
 	Stream    bool                 `json:"stream"`
-	Think     bool                 `json:"think"`
+	Think     string               `json:"think"`
 	KeepAlive time.Duration        `json:"keep_alive"`
 	Options   OllamaRequestOptions `json:"options"`
 	System    string               `json:"system"`

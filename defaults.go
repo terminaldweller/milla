@@ -132,4 +132,8 @@ func AddSaneDefaults(config *TomlConfig) {
 	if config.DbBackOffMaxInterval == 0 {
 		config.DbBackOffMaxInterval = 60
 	}
+
+	if config.OllamaThink == "" {
+		config.OllamaThink = "false"
+	}
 }
