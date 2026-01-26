@@ -1,0 +1,114 @@
+manifest:
+  version: "0.1.2"
+  schema: https://a2as.org/cert/schema
+  subject:
+    name: terminaldweller/milla
+    source: https://github.com/terminaldweller/milla
+    branch: main
+    commit: "f09325db"
+    scope: [useragents/src/current_time.py, useragents/src/custom_agents/web_search_tool.py, useragents/main.py]
+  issued:
+    by: A2AS.org
+    at: '2026-01-26T16:14:00Z'
+  signatures:
+    digest: sha256:PwfLA-ha0E8U0nfRmlcgvbIwQUij2rghoRMw9lOP9F4
+    key: ed25519:9ORPVmFvU03qiLgwAZKgfWToYXNdHTWpq7vcEtlvZUk
+    sig: ed25519:t_Yjw2vSffdj57rWQTw-wp5G6TUH6v6JogFEQXXpqFx0RysXHTQRf1LDjVMYZLVYFDu3dpA5zhXvs4e9TBtSAQ
+
+agents:
+  agent:
+    type: instance
+    models: [gpt-4.1]
+    tools: [tools]
+    params:
+      function: web_search_tool
+      name: agent_request.agent_name
+
+models:
+  gpt-4.1:
+    type: default
+    agents: [agent]
+
+tools:
+  fetch_date:
+    type: decorator
+    params:
+      description: Fetches the current date.
+  fetch_time:
+    type: decorator
+    params:
+      description: Fetches the current time.
+  tools:
+    type: variable
+    agents: [agent]
+    params:
+      dynamic: "True"
+
+imports:
+  Agent: agents.Agent
+  agentRegistry: src.registry.agentRegistry
+  AgentRequest: src.models.AgentRequest
+  AgentResponse: src.models.AgentResponse
+  argparse: argparse
+  datetime: datetime.datetime
+  fastapi: fastapi
+  fetch_date: src.current_time.fetch_date
+  function_tool: agents.function_tool
+  jsonable_encoder: fastapi.encoders.jsonable_encoder
+  JSONResponse: fastapi.responses.JSONResponse
+  os: os
+  Runner: agents.Runner
+  sys: sys
+  util: importlib.util
+  uvicorn: uvicorn
+  WebSearchTool: agents.WebSearchTool
+
+functions:
+  __init__:
+    type: sync
+    module: useragents.main
+    args: [self]
+  agent_handler:
+    type: async
+    module: useragents.main
+    args: [self, agent_request]
+    params:
+      returns: fastapi.Response
+  fetch_date:
+    type: tool
+    module: useragents.src.current_time
+  fetch_time:
+    type: tool
+    module: useragents.src.current_time
+  get_agent_generator:
+    type: sync
+    module: useragents.main
+    args: [agent_name]
+    params:
+      returns: Agent
+  load_plugins:
+    type: sync
+    module: useragents.main
+    args: [plugin_dir]
+  main:
+    type: sync
+    module: useragents.main
+  run:
+    type: async
+    module: useragents.main
+    args: [self]
+    params:
+      returns: str
+  web_search_tool:
+    type: sync
+    module: useragents.src.custom_agents.web_search_tool
+    args: [agent_request]
+    params:
+      returns: Agent
+
+files:
+  plugin_dir:
+    type: variable
+    actions: [read]
+    params:
+      caller: [os.listdir]
